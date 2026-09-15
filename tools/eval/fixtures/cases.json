@@ -1,0 +1,302 @@
+[
+  {
+    "id": "case-01-pasta-basic",
+    "inventory": ["spaghetti", "garlic", "olive oil", "parmesan", "chili flakes", "parsley"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1001, "title": "Spaghetti Aglio e Olio", "ingredients": ["spaghetti", "garlic", "olive oil", "chili flakes", "parsley", "parmesan"], "steps": ["Boil the spaghetti in salted water until al dente.", "Warm sliced garlic and chili flakes in olive oil.", "Toss the drained pasta with the oil, parsley and parmesan."]},
+      {"id": 1002, "title": "Cacio e Pepe", "ingredients": ["spaghetti", "pecorino", "black pepper", "butter"], "steps": ["Cook the pasta and reserve the cooking water.", "Whisk pecorino with pepper and pasta water into a cream.", "Toss the pasta through the cheese cream."]},
+      {"id": 1003, "title": "Garlic Butter Noodles", "ingredients": ["egg noodles", "butter", "garlic", "soy sauce", "scallion"], "steps": ["Cook the noodles.", "Fry garlic in butter, add soy sauce.", "Toss noodles in the sauce and top with scallion."]}
+    ]
+  },
+  {
+    "id": "case-02-eggs-breakfast",
+    "inventory": ["eggs", "butter", "cheddar", "chives", "bread"],
+    "prefs": {"allergies": [], "dislikes": ["mushroom"], "diet": null, "servings": 1},
+    "recipes": [
+      {"id": 1004, "title": "Cheese Omelette", "ingredients": ["eggs", "butter", "cheddar", "chives", "salt"], "steps": ["Beat the eggs with salt.", "Cook them gently in foaming butter.", "Fold cheddar and chives inside and slide onto a plate."]},
+      {"id": 1005, "title": "Mushroom Scramble", "ingredients": ["eggs", "mushroom", "butter", "cream"], "steps": ["Fry sliced mushrooms in butter.", "Add beaten eggs and cream.", "Stir over low heat until softly set."]},
+      {"id": 1006, "title": "Shakshuka", "ingredients": ["eggs", "tomato", "onion", "paprika", "olive oil"], "steps": ["Soften onion in oil, add tomato and paprika.", "Crack the eggs into the sauce.", "Cover and cook until the whites are set."]}
+    ]
+  },
+  {
+    "id": "case-03-chicken-rice",
+    "inventory": ["chicken thighs", "rice", "onion", "garlic", "soy sauce", "ginger", "vegetable oil"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 3},
+    "recipes": [
+      {"id": 1007, "title": "Soy Ginger Chicken Rice", "ingredients": ["chicken thighs", "rice", "soy sauce", "ginger", "garlic", "scallion"], "steps": ["Sear the chicken skin side down.", "Add aromatics, soy sauce and rice with water.", "Cover and steam until the rice is tender."]},
+      {"id": 1008, "title": "Chicken Fried Rice", "ingredients": ["cooked rice", "chicken", "eggs", "peas", "soy sauce", "vegetable oil"], "steps": ["Scramble eggs in a hot wok and set aside.", "Fry chicken and peas, add rice.", "Season with soy sauce and fold the eggs back in."]},
+      {"id": 1009, "title": "Chicken Pilaf", "ingredients": ["chicken", "rice", "onion", "carrot", "cumin", "butter"], "steps": ["Brown onion and carrot in butter.", "Add chicken, cumin and rice.", "Pour in stock and cook covered until absorbed."]}
+    ]
+  },
+  {
+    "id": "case-04-nut-allergy",
+    "inventory": ["chicken breast", "coconut milk", "curry paste", "rice", "lime", "cilantro"],
+    "prefs": {"allergies": ["peanut", "tree nuts"], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1010, "title": "Thai Green Curry", "ingredients": ["chicken breast", "coconut milk", "curry paste", "lime", "cilantro", "fish sauce"], "steps": ["Fry the curry paste until fragrant.", "Add coconut milk and the chicken.", "Finish with lime juice and cilantro."]},
+      {"id": 1011, "title": "Peanut Satay Chicken", "ingredients": ["chicken breast", "peanut butter", "coconut milk", "soy sauce", "lime"], "steps": ["Blend peanut butter with coconut milk and soy.", "Grill the chicken skewers.", "Serve with the warm peanut sauce."]},
+      {"id": 1012, "title": "Coconut Rice Bowl", "ingredients": ["rice", "coconut milk", "chicken", "cilantro", "cucumber"], "steps": ["Cook the rice in diluted coconut milk.", "Poach and shred the chicken.", "Assemble with cucumber and cilantro."]}
+    ]
+  },
+  {
+    "id": "case-05-vegan-lentils",
+    "inventory": ["red lentils", "onion", "carrot", "tomato paste", "cumin", "olive oil", "lemon"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegan", "servings": 4},
+    "recipes": [
+      {"id": 1013, "title": "Red Lentil Soup", "ingredients": ["red lentils", "onion", "carrot", "cumin", "olive oil", "lemon"], "steps": ["Sweat onion and carrot in olive oil.", "Add lentils, cumin and water and simmer until soft.", "Blend and sharpen with lemon juice."]},
+      {"id": 1014, "title": "Lentil Bolognese", "ingredients": ["red lentils", "tomato paste", "onion", "carrot", "olive oil", "pasta"], "steps": ["Cook the soffritto.", "Add tomato paste and lentils with water.", "Simmer until thick and serve over pasta."]},
+      {"id": 1015, "title": "Creamy Lentil Dal", "ingredients": ["red lentils", "butter", "cream", "cumin", "onion"], "steps": ["Boil lentils with cumin.", "Stir in butter and cream.", "Season and serve."]}
+    ]
+  },
+  {
+    "id": "case-06-dairy-free",
+    "inventory": ["potato", "leek", "olive oil", "vegetable stock", "thyme"],
+    "prefs": {"allergies": ["milk"], "dislikes": [], "diet": null, "servings": 4},
+    "recipes": [
+      {"id": 1016, "title": "Potato Leek Soup", "ingredients": ["potato", "leek", "butter", "cream", "vegetable stock"], "steps": ["Soften the leeks in butter.", "Add potato and stock, simmer until tender.", "Blend with cream."]},
+      {"id": 1017, "title": "Olive Oil Potato Soup", "ingredients": ["potato", "leek", "olive oil", "vegetable stock", "thyme"], "steps": ["Cook leek and thyme in olive oil.", "Add potato and stock and simmer.", "Blend until smooth and drizzle with more oil."]},
+      {"id": 1018, "title": "Roasted Potato Wedges", "ingredients": ["potato", "olive oil", "thyme", "garlic"], "steps": ["Cut potatoes into wedges.", "Toss with oil, thyme and garlic.", "Roast until crisp."]}
+    ]
+  },
+  {
+    "id": "case-07-fish-simple",
+    "inventory": ["salmon fillet", "lemon", "butter", "dill", "asparagus", "salt"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1019, "title": "Pan Seared Salmon", "ingredients": ["salmon fillet", "butter", "lemon", "dill", "salt"], "steps": ["Salt the fillets and sear skin side down.", "Baste with butter and lemon.", "Rest briefly and scatter with dill."]},
+      {"id": 1020, "title": "Salmon with Asparagus Traybake", "ingredients": ["salmon fillet", "asparagus", "olive oil", "lemon"], "steps": ["Spread asparagus on a tray with oil.", "Add salmon and lemon slices.", "Roast until the fish flakes."]},
+      {"id": 1021, "title": "Teriyaki Salmon", "ingredients": ["salmon fillet", "soy sauce", "mirin", "sugar", "sesame seeds"], "steps": ["Reduce soy, mirin and sugar to a glaze.", "Sear the salmon.", "Coat in the glaze and sprinkle sesame."]}
+    ]
+  },
+  {
+    "id": "case-08-empty-ish-fridge",
+    "inventory": ["rice", "eggs", "soy sauce"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 1},
+    "recipes": [
+      {"id": 1022, "title": "Egg Rice Bowl", "ingredients": ["rice", "eggs", "soy sauce", "scallion", "sesame oil"], "steps": ["Cook the rice.", "Fry an egg until the edges crisp.", "Serve over rice with soy sauce and scallion."]},
+      {"id": 1023, "title": "Omurice", "ingredients": ["rice", "eggs", "ketchup", "onion", "chicken"], "steps": ["Fry rice with onion, chicken and ketchup.", "Make a thin omelette.", "Wrap the rice in the omelette."]},
+      {"id": 1024, "title": "Soy Butter Rice", "ingredients": ["rice", "butter", "soy sauce", "eggs"], "steps": ["Stir butter and soy into hot rice.", "Top with a soft boiled egg."]}
+    ]
+  },
+  {
+    "id": "case-09-gluten-free",
+    "inventory": ["rice noodles", "shrimp", "bean sprouts", "eggs", "lime", "fish sauce", "scallion"],
+    "prefs": {"allergies": ["wheat"], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1025, "title": "Pad Thai", "ingredients": ["rice noodles", "shrimp", "eggs", "bean sprouts", "fish sauce", "lime", "peanuts"], "steps": ["Soak the noodles until pliable.", "Stir fry shrimp, push aside and scramble the eggs.", "Add noodles, sauce and sprouts and toss."]},
+      {"id": 1026, "title": "Shrimp Lo Mein", "ingredients": ["wheat noodles", "shrimp", "soy sauce", "scallion", "sesame oil"], "steps": ["Boil the wheat noodles.", "Stir fry shrimp with soy and sesame.", "Toss everything with scallion."]},
+      {"id": 1027, "title": "Shrimp Rice Noodle Soup", "ingredients": ["rice noodles", "shrimp", "fish sauce", "lime", "scallion"], "steps": ["Simmer a quick broth with fish sauce.", "Poach the shrimp in it.", "Pour over softened noodles and finish with lime."]}
+    ]
+  },
+  {
+    "id": "case-10-beef-stew",
+    "inventory": ["beef chuck", "onion", "carrot", "potato", "tomato paste", "bay leaf", "flour"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 4},
+    "recipes": [
+      {"id": 1028, "title": "Beef Stew", "ingredients": ["beef chuck", "onion", "carrot", "potato", "flour", "bay leaf", "beef stock"], "steps": ["Dust the beef with flour and brown it.", "Add vegetables, bay leaf and stock.", "Simmer slowly until the meat is tender."]},
+      {"id": 1029, "title": "Beef Bourguignon", "ingredients": ["beef chuck", "red wine", "bacon", "onion", "carrot", "flour"], "steps": ["Render bacon and brown the beef.", "Deglaze with red wine.", "Braise with the vegetables until soft."]},
+      {"id": 1030, "title": "Goulash", "ingredients": ["beef chuck", "onion", "paprika", "tomato paste", "potato"], "steps": ["Caramelise plenty of onion.", "Add paprika, tomato paste and beef.", "Simmer with potato until thick."]}
+    ]
+  },
+  {
+    "id": "case-11-vegetarian-tacos",
+    "inventory": ["black beans", "tortillas", "onion", "cumin", "lime", "cabbage", "hot sauce"],
+    "prefs": {"allergies": [], "dislikes": ["cilantro"], "diet": "vegetarian", "servings": 2},
+    "recipes": [
+      {"id": 1031, "title": "Black Bean Tacos", "ingredients": ["black beans", "tortillas", "onion", "cumin", "lime", "cabbage", "cilantro"], "steps": ["Fry onion with cumin and add the beans.", "Mash lightly and season with lime.", "Fill warm tortillas and top with shredded cabbage."]},
+      {"id": 1032, "title": "Beef Tacos", "ingredients": ["ground beef", "tortillas", "onion", "cumin", "cheddar"], "steps": ["Brown the beef with onion and cumin.", "Warm the tortillas.", "Fill and top with cheddar."]},
+      {"id": 1033, "title": "Bean and Cabbage Bowl", "ingredients": ["black beans", "cabbage", "lime", "hot sauce", "rice"], "steps": ["Warm the beans.", "Dress the cabbage with lime.", "Serve over rice with hot sauce."]}
+    ]
+  },
+  {
+    "id": "case-12-shellfish-allergy",
+    "inventory": ["spaghetti", "tomato", "garlic", "olive oil", "basil", "canned tuna"],
+    "prefs": {"allergies": ["shellfish"], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1034, "title": "Spaghetti alle Vongole", "ingredients": ["spaghetti", "clams", "garlic", "white wine", "parsley", "olive oil"], "steps": ["Open the clams in wine with garlic.", "Cook the spaghetti.", "Toss together with parsley and oil."]},
+      {"id": 1035, "title": "Tuna Tomato Spaghetti", "ingredients": ["spaghetti", "canned tuna", "tomato", "garlic", "olive oil", "basil"], "steps": ["Simmer crushed tomato with garlic in oil.", "Flake in the tuna.", "Toss with pasta and basil."]},
+      {"id": 1036, "title": "Pomodoro", "ingredients": ["spaghetti", "tomato", "garlic", "olive oil", "basil"], "steps": ["Cook garlic gently in oil.", "Add tomato and reduce.", "Toss with the pasta and basil."]}
+    ]
+  },
+  {
+    "id": "case-13-soup-from-scraps",
+    "inventory": ["cabbage", "carrot", "celery", "onion", "vegetable stock", "barley"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegetarian", "servings": 4},
+    "recipes": [
+      {"id": 1037, "title": "Barley Vegetable Soup", "ingredients": ["barley", "carrot", "celery", "onion", "cabbage", "vegetable stock"], "steps": ["Sweat the diced vegetables.", "Add barley and stock.", "Simmer until the barley is plump."]},
+      {"id": 1038, "title": "Minestrone", "ingredients": ["beans", "pasta", "carrot", "celery", "tomato", "vegetable stock"], "steps": ["Cook the soffritto.", "Add tomato, beans and stock.", "Add pasta near the end."]},
+      {"id": 1039, "title": "Cabbage Soup", "ingredients": ["cabbage", "onion", "carrot", "vegetable stock", "black pepper"], "steps": ["Soften onion and carrot.", "Add shredded cabbage and stock.", "Simmer and season generously."]}
+    ]
+  },
+  {
+    "id": "case-14-pork-stirfry",
+    "inventory": ["pork loin", "bell pepper", "onion", "soy sauce", "cornstarch", "garlic", "rice"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 3},
+    "recipes": [
+      {"id": 1040, "title": "Pork and Pepper Stir Fry", "ingredients": ["pork loin", "bell pepper", "onion", "soy sauce", "cornstarch", "garlic"], "steps": ["Slice and velvet the pork in cornstarch and soy.", "Sear it fast in a hot pan.", "Add peppers, onion and garlic and toss to coat."]},
+      {"id": 1041, "title": "Sweet and Sour Pork", "ingredients": ["pork loin", "pineapple", "bell pepper", "vinegar", "sugar", "cornstarch"], "steps": ["Coat and fry the pork.", "Cook the sweet and sour sauce.", "Combine with pineapple and peppers."]},
+      {"id": 1042, "title": "Pork Rice Bowl", "ingredients": ["pork loin", "rice", "soy sauce", "onion", "eggs"], "steps": ["Simmer pork and onion in soy.", "Pour over rice.", "Top with a soft egg."]}
+    ]
+  },
+  {
+    "id": "case-15-egg-allergy",
+    "inventory": ["flour", "oats", "banana", "milk", "baking powder", "cinnamon", "butter"],
+    "prefs": {"allergies": ["egg"], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1043, "title": "Classic Pancakes", "ingredients": ["flour", "eggs", "milk", "baking powder", "butter", "sugar"], "steps": ["Whisk eggs with milk.", "Fold in the dry mix.", "Fry in butter until golden."]},
+      {"id": 1044, "title": "Banana Oat Pancakes", "ingredients": ["oats", "banana", "milk", "baking powder", "cinnamon", "butter"], "steps": ["Blend oats, banana and milk into a batter.", "Rest it briefly with baking powder and cinnamon.", "Cook in buttered pan until bubbles set."]},
+      {"id": 1045, "title": "Oat Porridge", "ingredients": ["oats", "milk", "banana", "cinnamon"], "steps": ["Simmer oats in milk.", "Stir in sliced banana.", "Dust with cinnamon."]}
+    ]
+  },
+  {
+    "id": "case-16-salad-lunch",
+    "inventory": ["chickpeas", "cucumber", "tomato", "red onion", "olive oil", "lemon", "feta"],
+    "prefs": {"allergies": [], "dislikes": ["olives"], "diet": "vegetarian", "servings": 2},
+    "recipes": [
+      {"id": 1046, "title": "Chickpea Salad", "ingredients": ["chickpeas", "cucumber", "tomato", "red onion", "olive oil", "lemon", "feta"], "steps": ["Drain the chickpeas and dice the vegetables.", "Dress with oil and lemon.", "Crumble feta over the top."]},
+      {"id": 1047, "title": "Greek Salad", "ingredients": ["cucumber", "tomato", "olives", "feta", "red onion", "oregano"], "steps": ["Cut the vegetables coarsely.", "Add olives and feta.", "Dress and sprinkle oregano."]},
+      {"id": 1048, "title": "Lemon Chickpea Mash", "ingredients": ["chickpeas", "lemon", "olive oil", "garlic"], "steps": ["Warm chickpeas with garlic in oil.", "Mash roughly.", "Brighten with lemon."]}
+    ]
+  },
+  {
+    "id": "case-17-bakes-with-what-is-left",
+    "inventory": ["zucchini", "eggs", "flour", "parmesan", "olive oil", "mint"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegetarian", "servings": 2},
+    "recipes": [
+      {"id": 1049, "title": "Zucchini Fritters", "ingredients": ["zucchini", "eggs", "flour", "parmesan", "mint", "olive oil"], "steps": ["Grate and salt the zucchini, then squeeze it dry.", "Mix with eggs, flour, parmesan and mint.", "Fry spoonfuls in oil until crisp."]},
+      {"id": 1050, "title": "Zucchini Gratin", "ingredients": ["zucchini", "cream", "parmesan", "garlic", "breadcrumbs"], "steps": ["Layer sliced zucchini with cream and garlic.", "Top with parmesan and breadcrumbs.", "Bake until bubbling."]},
+      {"id": 1051, "title": "Zucchini Pasta", "ingredients": ["zucchini", "pasta", "olive oil", "parmesan", "mint"], "steps": ["Slowly collapse zucchini in oil.", "Toss with pasta.", "Finish with parmesan and mint."]}
+    ]
+  },
+  {
+    "id": "case-18-soy-allergy",
+    "inventory": ["chicken breast", "bell pepper", "onion", "tomato", "paprika", "olive oil", "rice"],
+    "prefs": {"allergies": ["soy"], "dislikes": [], "diet": null, "servings": 3},
+    "recipes": [
+      {"id": 1052, "title": "Chicken Stir Fry", "ingredients": ["chicken breast", "bell pepper", "onion", "soy sauce", "garlic", "vegetable oil"], "steps": ["Sear the chicken.", "Add vegetables and soy sauce.", "Toss until glossy."]},
+      {"id": 1053, "title": "Chicken Paprikash Style Skillet", "ingredients": ["chicken breast", "bell pepper", "onion", "tomato", "paprika", "olive oil"], "steps": ["Brown the chicken in olive oil.", "Cook onion and pepper with paprika.", "Add tomato and simmer until saucy."]},
+      {"id": 1054, "title": "Arroz con Pollo", "ingredients": ["chicken breast", "rice", "onion", "bell pepper", "tomato", "paprika"], "steps": ["Brown the chicken and set aside.", "Fry the sofrito, add rice and paprika.", "Return the chicken and cook until the rice absorbs the liquid."]}
+    ]
+  },
+  {
+    "id": "case-19-mostly-missing",
+    "inventory": ["onion", "garlic", "olive oil", "salt"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1055, "title": "French Onion Soup", "ingredients": ["onion", "butter", "beef stock", "bread", "gruyere", "thyme"], "steps": ["Caramelise the onions slowly in butter.", "Add stock and thyme and simmer.", "Top with bread and gruyere and grill."]},
+      {"id": 1056, "title": "Garlic Confit", "ingredients": ["garlic", "olive oil", "salt", "rosemary"], "steps": ["Cover peeled garlic with oil.", "Cook very gently until soft.", "Season and store in the oil."]},
+      {"id": 1057, "title": "Onion Jam", "ingredients": ["onion", "sugar", "vinegar", "olive oil", "salt"], "steps": ["Cook sliced onion in oil until collapsed.", "Add sugar and vinegar.", "Reduce until jammy."]}
+    ]
+  },
+  {
+    "id": "case-20-pescatarian",
+    "inventory": ["canned tuna", "potato", "green beans", "eggs", "olive oil", "lemon", "capers"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "pescatarian", "servings": 2},
+    "recipes": [
+      {"id": 1058, "title": "Tuna Nicoise Style Plate", "ingredients": ["canned tuna", "potato", "green beans", "eggs", "olive oil", "lemon", "capers"], "steps": ["Boil potatoes and beans separately until just done.", "Soft boil the eggs.", "Arrange with tuna and dress with oil, lemon and capers."]},
+      {"id": 1059, "title": "Tuna Potato Cakes", "ingredients": ["canned tuna", "potato", "eggs", "breadcrumbs", "lemon"], "steps": ["Mash cooked potato with tuna and egg.", "Shape and coat in breadcrumbs.", "Fry until golden."]},
+      {"id": 1060, "title": "Green Bean Salad", "ingredients": ["green beans", "olive oil", "lemon", "capers", "red onion"], "steps": ["Blanch the beans.", "Dress while warm.", "Scatter capers and onion."]}
+    ]
+  },
+  {
+    "id": "case-21-noodle-soup",
+    "inventory": ["ramen noodles", "miso paste", "eggs", "scallion", "spinach", "garlic", "sesame oil"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegetarian", "servings": 2},
+    "recipes": [
+      {"id": 1061, "title": "Miso Ramen", "ingredients": ["ramen noodles", "miso paste", "eggs", "scallion", "spinach", "garlic", "sesame oil"], "steps": ["Loosen miso with hot water and garlic to make broth.", "Cook the noodles and soft boil the eggs.", "Assemble with spinach, egg halves and scallion."]},
+      {"id": 1062, "title": "Pork Ramen", "ingredients": ["ramen noodles", "pork belly", "soy sauce", "eggs", "scallion"], "steps": ["Braise the pork belly in soy.", "Cook the noodles in the broth.", "Top with pork, egg and scallion."]},
+      {"id": 1063, "title": "Garlic Sesame Noodles", "ingredients": ["ramen noodles", "garlic", "sesame oil", "soy sauce", "scallion"], "steps": ["Boil and drain the noodles.", "Toss with garlic oil and soy.", "Finish with scallion."]}
+    ]
+  },
+  {
+    "id": "case-22-single-candidate",
+    "inventory": ["ground beef", "onion", "tomato", "pasta", "garlic", "oregano"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 4},
+    "recipes": [
+      {"id": 1064, "title": "Simple Bolognese", "ingredients": ["ground beef", "onion", "tomato", "garlic", "oregano", "pasta", "red wine"], "steps": ["Brown the beef with onion and garlic.", "Deglaze with wine, add tomato and oregano.", "Simmer long and serve with pasta."]}
+    ]
+  },
+  {
+    "id": "case-23-five-candidates",
+    "inventory": ["tofu", "broccoli", "garlic", "soy sauce", "cornstarch", "rice", "sesame oil"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegan", "servings": 2},
+    "recipes": [
+      {"id": 1065, "title": "Crispy Tofu with Broccoli", "ingredients": ["tofu", "broccoli", "cornstarch", "soy sauce", "garlic", "sesame oil"], "steps": ["Press the tofu, cube it and dust with cornstarch.", "Fry until crisp on all sides.", "Stir fry broccoli and garlic, then coat everything in soy."]},
+      {"id": 1066, "title": "Mapo Tofu", "ingredients": ["tofu", "ground pork", "doubanjiang", "garlic", "cornstarch"], "steps": ["Fry pork with chili bean paste.", "Add tofu cubes and simmer.", "Thicken with cornstarch slurry."]},
+      {"id": 1067, "title": "Tofu Rice Bowl", "ingredients": ["tofu", "rice", "soy sauce", "sesame oil", "scallion"], "steps": ["Pan fry tofu slices.", "Glaze with soy and sesame.", "Serve over rice."]},
+      {"id": 1068, "title": "Broccoli Garlic Stir Fry", "ingredients": ["broccoli", "garlic", "soy sauce", "sesame oil"], "steps": ["Blanch the broccoli.", "Flash fry with garlic.", "Season with soy and sesame."]},
+      {"id": 1069, "title": "Tofu Scramble", "ingredients": ["tofu", "turmeric", "onion", "bell pepper", "olive oil"], "steps": ["Crumble the tofu.", "Fry with onion, pepper and turmeric.", "Season to taste."]}
+    ]
+  },
+  {
+    "id": "case-24-long-inventory",
+    "inventory": ["chicken thighs", "lemon", "garlic", "oregano", "potato", "olive oil", "onion", "yogurt", "cucumber", "dill", "paprika", "honey", "mustard", "carrot", "rice"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 4},
+    "recipes": [
+      {"id": 1070, "title": "Greek Lemon Chicken and Potatoes", "ingredients": ["chicken thighs", "potato", "lemon", "garlic", "oregano", "olive oil"], "steps": ["Toss chicken and potato wedges with lemon, garlic, oregano and oil.", "Roast at high heat.", "Baste halfway and finish until the skin crisps."]},
+      {"id": 1071, "title": "Honey Mustard Chicken", "ingredients": ["chicken thighs", "honey", "mustard", "garlic", "olive oil"], "steps": ["Whisk honey, mustard and garlic.", "Coat the chicken.", "Roast until sticky."]},
+      {"id": 1072, "title": "Chicken Gyros Bowl", "ingredients": ["chicken thighs", "yogurt", "cucumber", "dill", "paprika", "rice"], "steps": ["Marinate chicken in yogurt and paprika.", "Grill and slice.", "Serve over rice with cucumber dill yogurt."]}
+    ]
+  },
+  {
+    "id": "case-25-dessert",
+    "inventory": ["dark chocolate", "butter", "sugar", "eggs", "flour", "salt"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 4},
+    "recipes": [
+      {"id": 1073, "title": "Chocolate Lava Cakes", "ingredients": ["dark chocolate", "butter", "sugar", "eggs", "flour", "salt"], "steps": ["Melt chocolate with butter.", "Whisk in sugar, eggs, flour and salt.", "Bake hot and briefly so the centres stay molten."]},
+      {"id": 1074, "title": "Brownies", "ingredients": ["dark chocolate", "butter", "sugar", "eggs", "flour", "cocoa", "walnuts"], "steps": ["Melt chocolate and butter.", "Beat in sugar and eggs, fold in flour and cocoa.", "Bake until the top cracks."]},
+      {"id": 1075, "title": "Chocolate Mousse", "ingredients": ["dark chocolate", "eggs", "sugar", "cream"], "steps": ["Melt the chocolate.", "Fold in whipped cream and beaten eggs.", "Chill until set."]}
+    ]
+  },
+  {
+    "id": "case-26-sesame-allergy",
+    "inventory": ["cucumber", "rice vinegar", "sugar", "chili flakes", "garlic", "carrot"],
+    "prefs": {"allergies": ["sesame"], "dislikes": [], "diet": "vegan", "servings": 2},
+    "recipes": [
+      {"id": 1076, "title": "Smashed Cucumber Salad", "ingredients": ["cucumber", "garlic", "rice vinegar", "sugar", "sesame oil", "chili flakes"], "steps": ["Smash and salt the cucumbers.", "Whisk vinegar, sugar, sesame oil and garlic.", "Toss with chili flakes."]},
+      {"id": 1077, "title": "Quick Pickled Carrots", "ingredients": ["carrot", "rice vinegar", "sugar", "salt", "chili flakes"], "steps": ["Julienne the carrots.", "Warm vinegar with sugar and salt.", "Pour over and chill."]},
+      {"id": 1078, "title": "Cucumber Carrot Slaw", "ingredients": ["cucumber", "carrot", "rice vinegar", "sugar", "garlic", "chili flakes"], "steps": ["Shred cucumber and carrot.", "Dress with sweetened vinegar and garlic.", "Rest ten minutes before serving."]}
+    ]
+  },
+  {
+    "id": "case-27-leftover-rice",
+    "inventory": ["cooked rice", "kimchi", "eggs", "scallion", "vegetable oil", "gochujang"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": "vegetarian", "servings": 2},
+    "recipes": [
+      {"id": 1079, "title": "Kimchi Fried Rice", "ingredients": ["cooked rice", "kimchi", "gochujang", "eggs", "scallion", "vegetable oil"], "steps": ["Fry chopped kimchi in oil with gochujang.", "Add the cold rice and break it up.", "Top each portion with a fried egg and scallion."]},
+      {"id": 1080, "title": "Bacon Fried Rice", "ingredients": ["cooked rice", "bacon", "eggs", "soy sauce", "scallion"], "steps": ["Render the bacon.", "Fry rice in the fat.", "Fold in scrambled egg and soy."]},
+      {"id": 1081, "title": "Kimchi Pancake", "ingredients": ["kimchi", "flour", "eggs", "scallion", "vegetable oil"], "steps": ["Mix kimchi with flour, egg and water.", "Fry thin in hot oil.", "Cut into wedges."]}
+    ]
+  },
+  {
+    "id": "case-28-grill-night",
+    "inventory": ["lamb chops", "garlic", "rosemary", "olive oil", "lemon", "potato", "yogurt"],
+    "prefs": {"allergies": [], "dislikes": [], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1082, "title": "Rosemary Lamb Chops", "ingredients": ["lamb chops", "garlic", "rosemary", "olive oil", "lemon", "salt"], "steps": ["Marinate the chops with garlic, rosemary and oil.", "Sear hard on both sides and rest.", "Squeeze lemon over before serving."]},
+      {"id": 1083, "title": "Lamb with Mint Sauce", "ingredients": ["lamb chops", "mint", "vinegar", "sugar", "olive oil"], "steps": ["Grill the chops.", "Blend mint with vinegar and sugar.", "Serve the sauce alongside."]},
+      {"id": 1084, "title": "Smashed Potatoes with Yogurt", "ingredients": ["potato", "olive oil", "yogurt", "garlic", "lemon"], "steps": ["Boil then smash the potatoes.", "Roast in oil until crisp.", "Serve with garlic lemon yogurt."]}
+    ]
+  },
+  {
+    "id": "case-29-baby-friendly",
+    "inventory": ["sweet potato", "carrot", "butter", "milk", "chicken breast", "rice"],
+    "prefs": {"allergies": [], "dislikes": ["spicy"], "diet": null, "servings": 2},
+    "recipes": [
+      {"id": 1085, "title": "Sweet Potato Carrot Mash", "ingredients": ["sweet potato", "carrot", "butter", "milk"], "steps": ["Steam the sweet potato and carrot until very soft.", "Mash with butter and a splash of milk.", "Season lightly."]},
+      {"id": 1086, "title": "Spicy Sweet Potato Wedges", "ingredients": ["sweet potato", "chili powder", "olive oil", "paprika"], "steps": ["Cut into wedges.", "Toss with chili and paprika.", "Roast until caramelised."]},
+      {"id": 1087, "title": "Chicken Rice Congee", "ingredients": ["rice", "chicken breast", "carrot", "butter"], "steps": ["Simmer rice with plenty of water until collapsed.", "Poach and shred the chicken into it.", "Stir in grated carrot and butter."]}
+    ]
+  },
+  {
+    "id": "case-30-many-allergies",
+    "inventory": ["quinoa", "chickpeas", "spinach", "olive oil", "lemon", "onion", "turmeric"],
+    "prefs": {"allergies": ["milk", "egg", "wheat", "peanut"], "dislikes": ["raisins"], "diet": "vegan", "servings": 3},
+    "recipes": [
+      {"id": 1088, "title": "Turmeric Quinoa with Chickpeas", "ingredients": ["quinoa", "chickpeas", "spinach", "onion", "turmeric", "olive oil", "lemon"], "steps": ["Toast quinoa with onion and turmeric in oil.", "Add water and cook until fluffy.", "Fold in chickpeas and spinach, finish with lemon."]},
+      {"id": 1089, "title": "Couscous Chickpea Salad", "ingredients": ["couscous", "chickpeas", "raisins", "olive oil", "lemon", "parsley"], "steps": ["Hydrate the couscous.", "Mix with chickpeas and raisins.", "Dress with oil and lemon."]},
+      {"id": 1090, "title": "Creamy Spinach Quinoa", "ingredients": ["quinoa", "spinach", "cream", "parmesan", "onion"], "steps": ["Cook the quinoa.", "Wilt spinach with cream.", "Combine and finish with parmesan."]}
+    ]
+  }
+]

@@ -1,0 +1,28 @@
+name: recipe-llm
+
+services:
+  llm-service:
+    build:
+      context: .
+      target: dev
+    env_file: .env
+    ports: ["9000:9000"]
+    # LM Studio stays on the host; host-gateway works on Linux too and, unlike
+    # network_mode: host, keeps DNS between containers on recipe-net intact.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./:/app
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health')
+      interval: 10s
+      retries: 5
+    networks: [recipe-net]
+
+networks:
+  recipe-net:
+    external: true
