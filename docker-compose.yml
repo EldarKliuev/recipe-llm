@@ -6,6 +6,10 @@ services:
       context: .
       target: dev
     env_file: .env
+    # .env is set up for runs from the host, where 127.0.0.1 is LM Studio. Inside the
+    # container that address is the container itself, and environment beats env_file.
+    environment:
+      LLM_BASE_URL: ${LLM_DOCKER_BASE_URL:-http://host.docker.internal:1234/v1}
     ports: ["9000:9000"]
     # LM Studio stays on the host; host-gateway works on Linux too and, unlike
     # network_mode: host, keeps DNS between containers on recipe-net intact.

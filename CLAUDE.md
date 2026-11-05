@@ -116,7 +116,7 @@ git fetch origin main -q && git diff --name-only origin/main...HEAD
 | GET | `/ready` | Провайдер показывает `LLM_MODEL` в списке моделей |
 | GET | `/metrics-lite` | Очередь, счётчики запусков, доля repair, p95 |
 
-**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `HTTP_PORT=9000`, `LOG_LEVEL`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
+**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_DOCKER_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `HTTP_PORT=9000`, `LOG_LEVEL`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
 
 **Команды** (`make help` покажет все):
 
@@ -146,7 +146,7 @@ uv run pytest tests/test_gate.py::test_queue_wait_timeout_raises_queue_full
 uv run python -m tools.eval --limit 3
 ```
 
-`LLM_BASE_URL` по умолчанию использует `host.docker.internal` — это взгляд на хост из контейнера, на самом Mac имя не резолвится. Для запусков с хоста (`make dev`, `make llm-check`, `make eval-local`) задай `LLM_BASE_URL=http://127.0.0.1:1234/v1`.
+`.env` настроен на запуски с хоста (`make dev`, `make llm-check`, `make eval-local`): `LLM_BASE_URL=http://127.0.0.1:1234/v1`. На самом Mac имя `host.docker.internal` не резолвится, а из контейнера `127.0.0.1` указывает на сам контейнер. Поэтому Compose подменяет `LLM_BASE_URL` значением `LLM_DOCKER_BASE_URL`, по умолчанию `http://host.docker.internal:1234/v1`. Чтобы направить контейнер на `LLM_PROVIDER=cloud`, задай в `.env` оба адреса.
 
 **Вне этого сервиса:** retrieval, pgvector, корпус на 64k, фильтры по времени готовки, jobs, SSE, `Idempotency-Key`, JWT, браузерный CORS, публичные `/api/v1`, `/cook/matches`, кэш генераций по хэшу инвентаря. Если задача, как тебе кажется, этого требует — это повод остановиться и спросить.
 
