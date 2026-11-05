@@ -9,7 +9,10 @@ from openai import (
     APIStatusError,
     APITimeoutError,
     AsyncOpenAI,
+    Omit,
+    omit,
 )
+from openai.types.shared import ReasoningEffort
 
 from app.errors import ProviderTimeoutError, ProviderUnavailableError
 
@@ -63,9 +66,11 @@ def extract_json_object(text: str) -> str:
 
 
 class OpenAICompatibleProvider:
-    """Shared implementation: LM Studio and cloud differ only in base_url, key and model."""
+    """Shared implementation: LM Studio and cloud differ in base_url, key, model and in
+    reasoning_effort, which a backend sets only when it needs it."""
 
     name = "openai_compatible"
+    reasoning_effort: ReasoningEffort | Omit = omit
 
     def __init__(
         self,
@@ -95,6 +100,7 @@ class OpenAICompatibleProvider:
                 response_format={"type": "json_schema", "json_schema": schema},
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
+                reasoning_effort=self.reasoning_effort,
                 timeout=timeout_s,
             )
         except APITimeoutError as exc:

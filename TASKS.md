@@ -23,15 +23,17 @@
 
 ### TASK-15. Дать контейнеру доступ к LM Studio
 
+- **Статус:** сделано 2026-11-05. Адрес контейнера задаётся через `LLM_DOCKER_BASE_URL`, `LMStudioProvider` отключает рассуждения. Открытым остаётся только пункт «Рядом, в `recipe-core`».
 - **Проблема:** в запущенном контейнере `LLM_BASE_URL=http://127.0.0.1:1234/v1`, то есть адрес указывает на сам контейнер. `/ready` отвечает 503 `provider_unavailable`, поэтому любая адаптация через сервис падает, хотя LM Studio работает и модель загружена. `/health` при этом отвечает 200, и по нему проблему не видно.
 - **Причина:** Compose и запуски с хоста (`make dev`, `make llm-check`, `make eval-local`) читают один `.env`. С хоста нужен `127.0.0.1`, потому что `host.docker.internal` на Mac не резолвится, а контейнеру нужен `host.docker.internal`. Одно значение не подходит обоим.
 - **Подтверждено (2026-11-05):** на хосте `127.0.0.1:1234/v1/models` отвечает 200, и `qwen/qwen3.5-9b` есть в списке. Из контейнера `127.0.0.1:1234` даёт `Connection refused`, а `host.docker.internal:1234` отвечает 200.
 - **Сделать:** задать `LLM_BASE_URL=http://host.docker.internal:1234/v1` в `environment` сервиса в `docker-compose.yml`: этот блок важнее `env_file`, поэтому `.env` останется настроенным для запусков с хоста. Обновить описание в §4 `CLAUDE.md`. Заметка «`.env` для контейнера» ниже закрывается этой задачей.
 - **Решить до кода:** переопределение в Compose также запретит направить контейнер на `LLM_PROVIDER=cloud` через `.env`. Подойдёт подстановка отдельной переменной со значением по умолчанию, например `${LLM_DOCKER_BASE_URL:-http://host.docker.internal:1234/v1}`.
+- **Вторая причина (найдена при проверке):** адрес заработал, но `/v1/adapt` отвечал 422 с пустым `raw_excerpt`: `qwen/qwen3.5-9b` под `json_schema` клала валидный JSON в `reasoning_content`, а `content` оставляла пустым. Из опробованных параметров помог только `reasoning_effort: "none"`; `chat_template_kwargs`, `reasoning: {effort}` и `/no_think` не подействовали.
 - **Рядом, в `recipe-core`:** в контейнере `core-api` тоже указан адрес для запуска с хоста: `LLM_SERVICE_URL=http://localhost:9000`. Из контейнера он даёт `Connection refused`, а `http://llm-service:9000/health` отвечает 200. Все 3 записи в `generation_runs` содержат эту ошибку. Без отдельной правки в локальном `.env` `recipe-core` адаптация не заработает даже после этой задачи.
 - **Блокирует:** TASK-04, а также сквозные проверки TASK-20 в `recipe-core/TASKS.md` и TASK-02 в `recipe-web/TASKS.md`.
 - **Готово, когда:** после `make up` запрос `make ready` отвечает 200 со `status: ready`, `make llm-check` с хоста проходит с прежним `.env`, а одна адаптация через `POST /v1/adapt` из контейнера возвращает 200.
-- **Файлы:** `docker-compose.yml`, `.env.example`, `CLAUDE.md`, `TASKS.md`.
+- **Файлы:** `docker-compose.yml`, `.env.example`, `CLAUDE.md`, `TASKS.md`, `app/providers/base.py`, `app/providers/lmstudio.py`, `tests/test_providers.py`.
 
 ## P1 — влияет на пользователя
 
