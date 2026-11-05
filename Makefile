@@ -10,7 +10,7 @@ CASES ?= tools/eval/fixtures/cases.json
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install env dev test test-live lint fmt check up down restart logs sh build eval eval-local health ready metrics adapt clean
+.PHONY: help install env dev test test-live lint fmt check llm-check up down restart logs sh build eval eval-local health ready metrics adapt clean
 
 help: ## List the available targets
 	@grep -hE '^[a-z%-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -42,7 +42,10 @@ fmt: ## Reformat the code
 	uv run ruff format .
 	uv run ruff check --fix .
 
-check: lint test ## What CI runs: lint plus tests
+check: lint test llm-check ## Lint, tests and the LM Studio connection
+
+llm-check: ## Is LM Studio at LLM_BASE_URL reachable and LLM_MODEL listed
+	uv run python -m tools.check_llm
 
 # --- compose -----------------------------------------------------------------
 
