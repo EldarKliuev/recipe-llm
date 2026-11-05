@@ -30,7 +30,7 @@
 - **Сделать:** задать `LLM_BASE_URL=http://host.docker.internal:1234/v1` в `environment` сервиса в `docker-compose.yml`: этот блок важнее `env_file`, поэтому `.env` останется настроенным для запусков с хоста. Обновить описание в §4 `CLAUDE.md`. Заметка «`.env` для контейнера» ниже закрывается этой задачей.
 - **Решить до кода:** переопределение в Compose также запретит направить контейнер на `LLM_PROVIDER=cloud` через `.env`. Подойдёт подстановка отдельной переменной со значением по умолчанию, например `${LLM_DOCKER_BASE_URL:-http://host.docker.internal:1234/v1}`.
 - **Вторая причина (найдена при проверке):** адрес заработал, но `/v1/adapt` отвечал 422 с пустым `raw_excerpt`: `qwen/qwen3.5-9b` под `json_schema` клала валидный JSON в `reasoning_content`, а `content` оставляла пустым. Из опробованных параметров помог только `reasoning_effort: "none"`; `chat_template_kwargs`, `reasoning: {effort}` и `/no_think` не подействовали.
-- **Рядом, в `recipe-core`:** в контейнере `core-api` тоже указан адрес для запуска с хоста: `LLM_SERVICE_URL=http://localhost:9000`. Из контейнера он даёт `Connection refused`, а `http://llm-service:9000/health` отвечает 200. Все 3 записи в `generation_runs` содержат эту ошибку. Без отдельной правки в локальном `.env` `recipe-core` адаптация не заработает даже после этой задачи.
+- **Рядом, в `recipe-core`:** в контейнере `core-api` тоже указан адрес для запуска с хоста: `LLM_SERVICE_URL=http://localhost:9000`. Из контейнера он даёт `Connection refused`, а `http://llm-service:9000/health` отвечает 200. Все 3 записи в `generation_runs` содержат эту ошибку. Без отдельной правки в локальном `.env` `recipe-core` адаптация не заработает даже после этой задачи. Записано как TASK-22 в `recipe-core/TASKS.md`.
 - **Блокирует:** TASK-04, а также сквозные проверки TASK-20 в `recipe-core/TASKS.md` и TASK-02 в `recipe-web/TASKS.md`.
 - **Готово, когда:** после `make up` запрос `make ready` отвечает 200 со `status: ready`, `make llm-check` с хоста проходит с прежним `.env`, а одна адаптация через `POST /v1/adapt` из контейнера возвращает 200.
 - **Файлы:** `docker-compose.yml`, `.env.example`, `CLAUDE.md`, `TASKS.md`, `app/providers/base.py`, `app/providers/lmstudio.py`, `tests/test_providers.py`.
@@ -114,6 +114,13 @@
 - **Сделать:** колонка в CSV с числом шагов, совпавших с исходными после нормализации. Только в `tools/eval`, не в `app/` (§5.3). Нужна ли проверка в рантайме и в каком сервисе — решить по числам.
 - **Файлы:** `tools/eval/scoring.py`, `tools/eval/__main__.py`, `tests/test_scoring.py`.
 
+### TASK-16. Завести CI
+
+- **Проблема:** каталога `.github` нет, поэтому локальный прогон остаётся единственной проверкой (§6). Защита контракта и инвариантов держится на том, что его не забудут.
+- **Сделать:** запускать `make lint` и `make test`. `make test-live` и `make eval-local` в CI не входят: им нужна настоящая модель.
+- **Готово, когда:** PR с упавшим тестом не проходит проверку, а строка о CI в `CLAUDE.md` обновлена.
+- **Файлы:** новый файл в `.github/workflows/`, `CLAUDE.md`.
+
 ## P3 — мелочи
 
 ### TASK-11. `HTTP_PORT` ни на что не влияет
@@ -132,13 +139,20 @@
 ### TASK-13. Передавать `X-Request-ID` из `core-api` (репозиторий `recipe-core`)
 
 - **Проблема:** здесь заголовок принимается и возвращается, но `llmclient.go` его не отправляет (поиск по `internal/` пуст). Логи двух сервисов не связать.
-- **Файлы:** `recipe-core/internal/cook/llmclient.go`. Здесь правок нет.
+- **Файлы:** `recipe-core/internal/cook/llmclient.go`. Здесь правок нет, работа записана как TASK-25 в `recipe-core/TASKS.md`.
 
 ### TASK-14. Исправить подсказку про создание `recipe-net`
 
 - **Проблема:** `Makefile` и `CLAUDE.md` отправляют к «корневому Makefile», но в `/Users/eldar/Projects/Recipe Project` его нет. Сеть создаёт `make network` в `recipe-core` или `recipe-web`. Сообщение `make up` ведёт в никуда.
 - **Сделать:** указать настоящую команду. Сам `recipe-net` из этого репозитория не создавать (§13).
 - **Файлы:** `Makefile`, `CLAUDE.md`.
+
+### TASK-17. Привести план в актуальное состояние
+
+- **Проблема:** в плане все пункты отмечены `pending`, указан путь `services/llm-service`, а часть требований расходится с кодом (раздел «Решения, а не задачи» ниже). Например, минимум 3 рецепта сломал бы путь с выбранным рецептом.
+- **Сделать:** обновить статусы и пути, записать принятые решения из этого файла.
+- **Готово, когда:** план описывает текущую реализацию.
+- **Файлы:** план лежит вне репозитория: `~/.cursor/plans/recipe_llm_service_fastapi_a13d6b72.plan.md`.
 
 ## Потребители
 
