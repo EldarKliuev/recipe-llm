@@ -1,6 +1,12 @@
+import asyncio
 import json
+from time import perf_counter
 
+import pytest
+
+from app.domain.schemas import AdaptedRecipe
 from app.errors import ProviderTimeoutError, ProviderUnavailableError
+from app.usecases.runner import run_structured
 from tests.conftest import ADAPT_PAYLOAD, ADAPTED, FakeProvider
 
 
@@ -97,6 +103,108 @@ def test_provider_timeout_is_surfaced_as_504(make_client):
 
     assert response.status_code == 504
     assert response.json()["error"]["code"] == "provider_timeout"
+
+
+def test_slow_invalid_answers_stop_at_the_run_budget_with_422(make_client, settings):
+    settings.llm_run_budget_sec = 0.3
+    provider = FakeProvider(["{", "{", "{"], delay_s=0.2)
+
+    started = perf_counter()
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+    elapsed = perf_counter() - started
+
+    assert response.status_code == 422
+    assert "not json" in response.json()["error"]["detail"]["reason"]
+    assert len(provider.calls) == 2  # the second attempt ran out of budget, no third one
+    assert elapsed < 0.5  # three full attempts would take 0.6
+
+
+def test_hanging_model_stops_at_the_run_budget_with_504(make_client, settings):
+    settings.llm_run_budget_sec = 0.05
+    provider = FakeProvider([ADAPTED], delay_s=1.0)
+
+    started = perf_counter()
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 504
+    assert response.json()["error"]["code"] == "provider_timeout"
+    assert perf_counter() - started < 0.5
+
+
+def test_repair_gets_only_what_is_left_of_the_budget_and_still_works(make_client, settings):
+    settings.llm_run_budget_sec = 1.0
+    provider = FakeProvider(["{", ADAPTED], delay_s=0.2)
+
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["meta"]["retries"] == 1
+    assert provider.calls[0]["timeout_s"] <= 1.0
+    assert provider.calls[1]["timeout_s"] <= 0.8
+
+
+def test_attempt_timeout_still_caps_each_attempt_under_a_larger_budget(make_client, settings):
+    settings.llm_timeout_sec = 2
+    provider = FakeProvider([ADAPTED])
+
+    make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert provider.calls[0]["timeout_s"] == 2
+
+
+def test_timeout_after_an_invalid_answer_gives_422_not_504(make_client):
+    provider = FakeProvider(["{", ProviderTimeoutError("model did not answer within 5s")])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 422
+    assert "not json" in response.json()["error"]["detail"]["reason"]
+    assert len(provider.calls) == 2
+
+
+def test_unreachable_provider_after_an_invalid_answer_stays_503(make_client):
+    provider = FakeProvider(["{", ProviderUnavailableError("cannot reach the model")])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 503
+
+
+async def test_queue_wait_counts_against_the_run_budget(make_async_client, settings):
+    settings.llm_run_budget_sec = 0.25
+    provider = FakeProvider([ADAPTED, ADAPTED], delay_s=0.15)
+
+    async with make_async_client(provider) as client:
+        responses = await asyncio.gather(
+            client.post("/v1/adapt", json=ADAPT_PAYLOAD),
+            client.post("/v1/adapt", json=ADAPT_PAYLOAD),
+        )
+
+    assert sorted(response.status_code for response in responses) == [200, 504]
+    assert provider.calls[1]["timeout_s"] < 0.2  # 0.15 of its 0.25 went on the queue
+
+
+async def test_no_attempt_starts_once_the_queue_used_up_the_budget(gate):
+    provider = FakeProvider([ADAPTED, ADAPTED], delay_s=0.15)
+
+    def run(budget_s: float):
+        return run_structured(
+            provider=provider,
+            gate=gate,
+            output_model=AdaptedRecipe,
+            schema_name="adapted_recipe",
+            system="system",
+            user="user",
+            timeout_s=5,
+            budget_s=budget_s,
+        )
+
+    holder = asyncio.create_task(run(5))
+    await asyncio.sleep(0.01)
+
+    with pytest.raises(ProviderTimeoutError):
+        await run(0.05)
+
+    await holder
+    assert len(provider.calls) == 1
 
 
 def test_unreachable_provider_is_surfaced_as_503(make_client):

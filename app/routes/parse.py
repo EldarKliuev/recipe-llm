@@ -23,4 +23,5 @@ async def parse(
         provider=provider,
         gate=gate,
         timeout_s=settings.llm_timeout_sec,
+        budget_s=settings.llm_run_budget_sec,
     )

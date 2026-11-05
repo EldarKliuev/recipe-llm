@@ -19,6 +19,7 @@ async def parse_ingredients(
     provider: LLMProvider,
     gate: GpuGate,
     timeout_s: float,
+    budget_s: float,
 ) -> ParseIngredientsResponse:
     """Long tail of ingestion: lines that rules and CRF in core-api could not resolve."""
     expected = len(request.lines)
@@ -41,6 +42,7 @@ async def parse_ingredients(
         system=PARSE_SYSTEM,
         user=build_parse_user(request),
         timeout_s=timeout_s,
+        budget_s=budget_s,
         check=check,
     )
     log.info(

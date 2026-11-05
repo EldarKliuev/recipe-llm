@@ -44,10 +44,12 @@ class CaseResult:
     error: str = ""
 
 
-async def run_case(case: dict, *, provider, gate, timeout_s: float) -> CaseResult:
+async def run_case(case: dict, *, provider, gate, timeout_s: float, budget_s: float) -> CaseResult:
     request = AdaptRequest.model_validate(case)
     try:
-        response = await adapt_recipe(request, provider=provider, gate=gate, timeout_s=timeout_s)
+        response = await adapt_recipe(
+            request, provider=provider, gate=gate, timeout_s=timeout_s, budget_s=budget_s
+        )
     except ServiceError as exc:
         return CaseResult(case_id=case["id"], status=exc.code, error=exc.message)
 
@@ -147,7 +149,11 @@ async def main(argv: list[str] | None = None) -> int:
     try:
         for index, case in enumerate(cases, start=1):
             result = await run_case(
-                case, provider=provider, gate=gate, timeout_s=settings.llm_timeout_sec
+                case,
+                provider=provider,
+                gate=gate,
+                timeout_s=settings.llm_timeout_sec,
+                budget_s=settings.llm_run_budget_sec,
             )
             results.append(result)
             print(

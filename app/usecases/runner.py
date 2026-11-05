@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from collections.abc import Callable
@@ -7,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.domain.prompts import PROMPT_VERSION, build_repair_user
 from app.domain.schemas import RunMeta, strict_json_schema
-from app.errors import ModelOutputInvalidError
+from app.errors import ModelOutputInvalidError, ProviderTimeoutError
 from app.providers.base import LLMMeta, LLMProvider, MalformedModelJSON
 from app.usecases.gate import GpuGate, Slot
 
@@ -26,6 +27,7 @@ async def run_structured[T: BaseModel](
     system: str,
     user: str,
     timeout_s: float,
+    budget_s: float,
     check: Callable[[T], str | None] | None = None,
 ) -> tuple[T, RunMeta]:
     """Ask the model for JSON matching `output_model`, repairing invalid answers.
@@ -33,7 +35,14 @@ async def run_structured[T: BaseModel](
     `check` guards semantics we can cheaply verify here (for instance that the model kept to
     the supplied recipe ids). Returning a message from it triggers the same repair loop as a
     schema violation. Everything else — allergens, real inventory — is core-api's job.
+
+    `timeout_s` caps one attempt, `budget_s` the whole run with the queue wait included: core-api
+    stops waiting at its own timeout and would report "model busy". A timeout after an invalid
+    answer is therefore a 422, which core-api degrades on, while a model that never answered is
+    a 504. `asyncio.timeout` enforces the limit because the HTTP client's timeout only bounds
+    each read, not the whole request.
     """
+    deadline = asyncio.get_running_loop().time() + budget_s
     async with gate.slot() as slot:
         return await _attempt_loop(
             provider=provider,
@@ -43,6 +52,7 @@ async def run_structured[T: BaseModel](
             system=system,
             user=user,
             timeout_s=timeout_s,
+            deadline=deadline,
             check=check,
         )
 
@@ -56,22 +66,35 @@ async def _attempt_loop[T: BaseModel](
     system: str,
     user: str,
     timeout_s: float,
+    deadline: float,
     check: Callable[[T], str | None] | None,
 ) -> tuple[T, RunMeta]:
+    loop = asyncio.get_running_loop()
     schema = strict_json_schema(output_model, schema_name)
     current_user = user
     total_latency_ms = 0
     prompt_tokens = 0
     completion_tokens = 0
-    last_error = "unknown"
+    last_error: str | None = None
     last_raw = ""
 
     for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            break
         slot.retries = attempt
+        attempt_timeout = min(timeout_s, remaining)
         try:
-            data, meta = await provider.complete_json(
-                system=system, user=current_user, schema=schema, timeout_s=timeout_s
+            async with asyncio.timeout(attempt_timeout):
+                data, meta = await provider.complete_json(
+                    system=system, user=current_user, schema=schema, timeout_s=attempt_timeout
+                )
+        except (TimeoutError, ProviderTimeoutError):
+            log.warning(
+                "model attempt timed out",
+                extra={"attempt": attempt, "timeout_s": attempt_timeout},
             )
+            break
         except MalformedModelJSON as exc:
             total_latency_ms, prompt_tokens, completion_tokens = _accumulate(
                 exc.meta, total_latency_ms, prompt_tokens, completion_tokens
@@ -122,8 +145,10 @@ async def _attempt_loop[T: BaseModel](
             completion_tokens=completion_tokens or None,
         )
 
+    if last_error is None:
+        raise ProviderTimeoutError("model did not answer in time")
     raise ModelOutputInvalidError(
-        f"model output still invalid after {MAX_REPAIR_ATTEMPTS} repair attempts",
+        "model output still invalid: repair attempts or the run budget exhausted",
         detail={"reason": last_error, "raw_excerpt": last_raw[:500]},
     )
 
