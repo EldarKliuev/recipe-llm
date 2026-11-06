@@ -1,10 +1,12 @@
+import asyncio
 import json
 
 import httpx
 import pytest
 from openai import AsyncOpenAI
 
-from app.providers import CloudProvider, LMStudioProvider, MalformedModelJSON
+from app.errors import ProviderTimeoutError
+from app.providers import CloudProvider, LMStudioProvider, MalformedModelJSON, base
 from tests.conftest import ADAPTED
 
 
@@ -61,3 +63,25 @@ async def test_answer_only_in_reasoning_content_is_malformed_not_accepted():
 
     with pytest.raises(MalformedModelJSON):
         await provider.complete_json("s", "u", {"name": "x", "schema": {}}, 5)
+
+
+async def test_silent_provider_on_list_models_is_a_provider_timeout(monkeypatch):
+    """A real socket that accepts and never answers: the case a mocked timeout cannot prove."""
+    monkeypatch.setattr(base, "LIST_MODELS_TIMEOUT_SEC", 0.1)
+
+    async def accept_and_stay_silent(reader, writer) -> None:
+        await reader.read()
+        writer.close()
+
+    server = await asyncio.start_server(accept_and_stay_silent, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    provider = LMStudioProvider(
+        base_url=f"http://127.0.0.1:{port}/v1", api_key="k", model="m", max_tokens=8
+    )
+    try:
+        with pytest.raises(ProviderTimeoutError):
+            # The guard fails the test instead of waiting out the SDK's 600 s default.
+            await asyncio.wait_for(provider.list_models(), timeout=3)
+    finally:
+        await provider.aclose()
+        server.close()

@@ -18,6 +18,10 @@ from app.errors import ProviderTimeoutError, ProviderUnavailableError
 
 log = logging.getLogger(__name__)
 
+# The model list is served from memory, not generated. A provider silent for this long is not
+# ready, and the SDK default read timeout of 600 s would hang /ready and make llm-check.
+LIST_MODELS_TIMEOUT_SEC = 5.0
+
 
 @dataclass(slots=True)
 class LLMMeta:
@@ -139,7 +143,7 @@ class OpenAICompatibleProvider:
 
     async def list_models(self) -> list[str]:
         try:
-            page = await self._client.models.list()
+            page = await self._client.models.list(timeout=LIST_MODELS_TIMEOUT_SEC)
         except APITimeoutError as exc:
             raise ProviderTimeoutError("provider model list timed out", detail=str(exc)) from exc
         except (APIConnectionError, APIStatusError) as exc:

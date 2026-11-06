@@ -1,4 +1,4 @@
-from app.errors import ProviderUnavailableError
+from app.errors import ProviderTimeoutError, ProviderUnavailableError
 from tests.conftest import ADAPT_PAYLOAD, ADAPTED, FakeProvider
 
 
@@ -36,6 +36,17 @@ def test_ready_reports_an_unreachable_provider(make_client):
 
     assert response.status_code == 503
     assert response.json()["reason"] == "provider_unavailable"
+
+
+def test_ready_reports_a_silent_provider(make_client):
+    class Silent(FakeProvider):
+        async def list_models(self) -> list[str]:
+            raise ProviderTimeoutError("provider model list timed out")
+
+    response = make_client(Silent([])).get("/ready")
+
+    assert response.status_code == 503
+    assert response.json()["reason"] == "provider_timeout"
 
 
 def test_metrics_lite_counts_runs_and_repairs(make_client):
