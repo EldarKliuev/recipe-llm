@@ -1,6 +1,13 @@
 import asyncio
+import json
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+from typing import Any
 
 import pytest
+import uvicorn
+from fastapi import FastAPI
+from httpx import AsyncClient
 
 from app.errors import QueueFullError
 from app.metrics import Metrics
@@ -86,3 +93,122 @@ async def test_api_returns_503_with_retry_after_when_the_queue_is_full(make_asyn
     busy = by_status[503]
     assert busy.headers["Retry-After"] == "1"
     assert busy.json()["error"]["code"] == "queue_full"
+
+
+class HangingProvider(FakeProvider):
+    """Answers after `delay_s` and records whether the call was cancelled on the way."""
+
+    def __init__(self, script: list[Any], *, delay_s: float) -> None:
+        super().__init__(script, delay_s=delay_s)
+        self.cancelled = 0
+        self.started = asyncio.Event()
+
+    async def complete_json(self, system, user, schema, timeout_s):
+        self.started.set()
+        try:
+            return await super().complete_json(system, user, schema, timeout_s)
+        except asyncio.CancelledError:
+            self.cancelled += 1
+            raise
+
+
+@asynccontextmanager
+async def running_server(app: FastAPI) -> AsyncIterator[int]:
+    """A real uvicorn on a free port: ASGITransport cannot reproduce a dropped connection."""
+    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_config=None, lifespan="off")
+    server = uvicorn.Server(config)
+    serving = asyncio.create_task(server.serve())
+    assert await wait_until(lambda: server.started, timeout_s=5)
+    try:
+        yield server.servers[0].sockets[0].getsockname()[1]
+    finally:
+        server.should_exit = True
+        await serving
+
+
+async def send_post(port: int, path: str, payload: dict[str, Any]) -> asyncio.StreamWriter:
+    """Send a complete request over a raw socket, which the test can close at any moment."""
+    body = json.dumps(payload).encode()
+    _, writer = await asyncio.open_connection("127.0.0.1", port)
+    writer.write(
+        f"POST {path} HTTP/1.1\r\nHost: llm-service\r\nContent-Type: application/json\r\n"
+        f"Content-Length: {len(body)}\r\n\r\n".encode()
+        + body
+    )
+    await writer.drain()
+    return writer
+
+
+async def hang_up(writer: asyncio.StreamWriter) -> None:
+    writer.close()
+    await writer.wait_closed()
+
+
+async def wait_until(condition: Callable[[], bool], timeout_s: float = 1.0) -> bool:
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    while not condition():
+        if asyncio.get_running_loop().time() > deadline:
+            return False
+        await asyncio.sleep(0.01)
+    return True
+
+
+async def test_dropped_client_frees_the_slot_for_the_next_request(make_app, metrics):
+    provider = HangingProvider([ADAPTED, ADAPTED], delay_s=0.6)
+
+    async with running_server(make_app(provider)) as port:
+        writer = await send_post(port, "/v1/adapt", ADAPT_PAYLOAD)
+        await asyncio.wait_for(provider.started.wait(), timeout=2)
+        await hang_up(writer)
+
+        assert await wait_until(lambda: metrics.in_flight == 0, timeout_s=0.3)
+        assert provider.cancelled == 1
+
+        provider.delay_s = 0
+        async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
+            response = await client.post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert len(provider.calls) == 2
+
+
+async def test_client_dropped_while_queued_never_reaches_the_model(make_app, gate, metrics):
+    provider = HangingProvider([ADAPTED], delay_s=0)
+
+    async with running_server(make_app(provider)) as port:
+        async with gate.slot():
+            writer = await send_post(port, "/v1/adapt", ADAPT_PAYLOAD)
+            assert await wait_until(lambda: metrics.queue_depth == 1)
+            await hang_up(writer)
+
+            assert await wait_until(lambda: metrics.queue_depth == 0, timeout_s=0.1)
+
+        await asyncio.sleep(0.05)
+
+    assert provider.calls == []
+
+
+async def test_connected_client_still_gets_the_answer_on_a_real_server(make_app, metrics):
+    provider = HangingProvider([ADAPTED], delay_s=0.1)
+
+    async with running_server(make_app(provider)) as port:
+        async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
+            response = await client.post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["recipe"]["base_recipe_id"] == ADAPTED["base_recipe_id"]
+    assert provider.cancelled == 0
+    assert metrics.runs_failed == 0
+
+
+async def test_dropped_parse_client_frees_the_slot(make_app, metrics):
+    provider = HangingProvider([{"items": []}], delay_s=0.6)
+
+    async with running_server(make_app(provider)) as port:
+        writer = await send_post(port, "/v1/parse-ingredients", {"lines": ["2 cloves garlic"]})
+        await asyncio.wait_for(provider.started.wait(), timeout=2)
+        await hang_up(writer)
+
+        assert await wait_until(lambda: metrics.in_flight == 0, timeout_s=0.3)
+
+    assert provider.cancelled == 1
