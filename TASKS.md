@@ -12,7 +12,7 @@
 | Compose, `extra_hosts`, `workers=1` | Есть | `docker compose config`; образы `dev` и `prod` собираются; в `prod` один мастер и один воркер |
 | `LLMProvider`: lmstudio и cloud | Есть, настоящий провайдер почти без тестов (TASK-06) | `app/providers/base.py` покрыт на 45 %; реальный cloud не проверялся |
 | `POST /v1/adapt`: json_schema, repair, таймауты | Есть, общий лимит времени добавлен (TASK-01) | `tests/test_adapt.py` |
-| Семафор, очередь, 503 с `Retry-After` | Есть, слот держится после ухода клиента (TASK-02) | `test_api_returns_503_with_retry_after_when_the_queue_is_full` |
+| Семафор, очередь, 503 с `Retry-After` | Есть, слот освобождается при уходе клиента (TASK-02) | `test_api_returns_503_with_retry_after_when_the_queue_is_full`, `test_dropped_client_frees_the_slot_for_the_next_request` |
 | `POST /v1/parse-ingredients` | Есть, лимит токенов под вопросом (TASK-05) | `tests/test_parse.py` |
 | `tools/eval`: 30 фикстур, метрики, CSV | Код есть, прогона текущей модели нет (TASK-04) | `tests/test_eval_fixtures.py`; `tools/eval/results` на этой машине отсутствует |
 | `/ready`, `/metrics-lite` | Есть, у `/ready` нет явного таймаута (TASK-03) | `tests/test_ops.py`, контейнер |
@@ -49,6 +49,7 @@
 
 ### TASK-02. Освобождать GPU-слот, когда клиент ушёл
 
+- **Статус:** сделано 2026-11-06. Роуты отменяют работу при `http.disconnect`, статус в логе — 499. `BaseHTTPMiddleware` не мешает: разрыв доходит до обработчика на настоящем uvicorn. LM Studio прекращает генерацию при закрытии соединения (лог: `Client disconnected. Stopping generation...`), но уже начатую обработку промпта доводит до конца, поэтому GPU может быть занят чуть дольше слота.
 - **Проблема:** когда `core-api` отключается по таймауту, запрос продолжает работать и держит единственный слот. Следующие запросы получают 503, хотя результат уже никому не нужен.
 - **Подтверждено:** проба на настоящем uvicorn: клиент ушёл через 0,5 с, спустя 1 с `in_flight=1`, следующий запрос получил 503.
 - **Сделать:** отменять вызов модели при разрыве соединения и освобождать слот. `BaseHTTPMiddleware` в `app/main.py` может мешать отслеживанию разрыва — проверить первым делом.

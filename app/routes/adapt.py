@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.deps import GateDep, ProviderDep, SettingsDep
 from app.domain.schemas import AdaptRequest, AdaptResponse
+from app.routes.disconnect import cancel_on_disconnect
 from app.usecases.adapt import adapt_recipe
 
 router = APIRouter(prefix="/v1", tags=["adapt"])
@@ -14,14 +15,18 @@ router = APIRouter(prefix="/v1", tags=["adapt"])
 )
 async def adapt(
     payload: AdaptRequest,
+    request: Request,
     provider: ProviderDep,
     gate: GateDep,
     settings: SettingsDep,
 ) -> AdaptResponse:
-    return await adapt_recipe(
-        payload,
-        provider=provider,
-        gate=gate,
-        timeout_s=settings.llm_timeout_sec,
-        budget_s=settings.llm_run_budget_sec,
+    return await cancel_on_disconnect(
+        request,
+        adapt_recipe(
+            payload,
+            provider=provider,
+            gate=gate,
+            timeout_s=settings.llm_timeout_sec,
+            budget_s=settings.llm_run_budget_sec,
+        ),
     )

@@ -31,6 +31,13 @@ class ProviderTimeoutError(ServiceError):
     code = "provider_timeout"
 
 
+class ClientDisconnectedError(ServiceError):
+    """The caller hung up, so the status only reaches our own request log (nginx's 499)."""
+
+    status_code = 499
+    code = "client_disconnected"
+
+
 class ModelOutputInvalidError(ServiceError):
     """The model failed to produce output matching the schema, repair attempts included."""
 
