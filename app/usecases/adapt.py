@@ -15,6 +15,7 @@ async def adapt_recipe(
     provider: LLMProvider,
     gate: GpuGate,
     timeout_s: float,
+    budget_s: float,
 ) -> AdaptResponse:
     allowed_ids = {recipe.id for recipe in request.recipes}
 
@@ -36,6 +37,7 @@ async def adapt_recipe(
         system=ADAPT_SYSTEM,
         user=build_adapt_user(request),
         timeout_s=timeout_s,
+        budget_s=budget_s,
         check=check,
     )
     log.info(

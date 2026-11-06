@@ -67,7 +67,9 @@ class FakeProvider:
     async def complete_json(
         self, system: str, user: str, schema: dict[str, Any], timeout_s: float
     ) -> tuple[dict[str, Any], LLMMeta]:
-        self.calls.append({"system": system, "user": user, "schema": schema})
+        self.calls.append(
+            {"system": system, "user": user, "schema": schema, "timeout_s": timeout_s}
+        )
         if self.delay_s:
             await asyncio.sleep(self.delay_s)
         meta = LLMMeta(
@@ -101,6 +103,7 @@ def settings() -> Settings:
         llm_provider="lmstudio",
         llm_model="fake-model",
         llm_timeout_sec=5,
+        llm_run_budget_sec=5,
         llm_max_concurrency=1,
         llm_queue_wait_sec=0.2,
         llm_max_tokens=256,

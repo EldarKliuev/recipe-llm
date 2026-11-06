@@ -100,7 +100,7 @@ git fetch origin main -q && git diff --name-only origin/main...HEAD
 
 **Поток запроса:** `routes/` (тонкий HTTP) → `usecases/{adapt,parse}.py` → `usecases/runner.py` → `usecases/gate.py` → `providers/`.
 
-- **`run_structured` (`runner.py`) — ядро сервиса.** Через него идут оба эндпоинта: одна попытка и максимум 2 repair с текстом ошибки валидации. Непарсимый JSON (`MalformedModelJSON`), нарушение схемы и сообщение из `check` попадают в один цикл; исчерпание даёт `ModelOutputInvalidError`. Ошибки провайдера (таймаут, недоступность) не чинятся и всплывают сразу.
+- **`run_structured` (`runner.py`) — ядро сервиса.** Через него идут оба эндпоинта: одна попытка и максимум 2 repair с текстом ошибки валидации. Непарсимый JSON (`MalformedModelJSON`), нарушение схемы и сообщение из `check` попадают в один цикл; исчерпание даёт `ModelOutputInvalidError`. Общий лимит `LLM_RUN_BUDGET_SEC` считается с входа в очередь, каждая попытка получает не больше остатка. Недоступность провайдера не чинится и всплывает сразу. Таймаут тоже не чинится: без единого ответа модели это `ProviderTimeoutError`, а после невалидного ответа — `ModelOutputInvalidError`, чтобы `core-api` деградировал, а не показывал «модель занята».
 - **`GpuGate` (`gate.py`)** ограничивает параллелизм семафором внутри процесса. Слот держится на все repair-попытки.
 - **Одна схема на всё.** Pydantic-модели вывода в `domain/schemas.py` порождают `response_format` через `strict_json_schema`: каждый объект закрыт, каждое свойство обязательно. Необязательное поле вывода модели — это `T | None` без default.
 - **Провайдеры** различаются только `name` и `reasoning_effort`; `base_url`, ключ и модель приходят из настроек. `LMStudioProvider` отключает рассуждения (`reasoning_effort="none"`): иначе модель с рассуждениями под `json_schema` кладёт весь ответ в `reasoning_content` и оставляет `content` пустым. Облачному провайдеру поле не отправляется, потому что модель может отклонить его, а сервис покажет это как 503. Общая логика — в `OpenAICompatibleProvider`, новые бэкенды реализуют Protocol `LLMProvider`. Абстракция оправдана: домашний GPU — единая точка отказа, а мобильный клиент не достанет до LM Studio, поэтому `LLM_PROVIDER=cloud` должен подменять его без правок кода.
@@ -116,7 +116,7 @@ git fetch origin main -q && git diff --name-only origin/main...HEAD
 | GET | `/ready` | Провайдер показывает `LLM_MODEL` в списке моделей |
 | GET | `/metrics-lite` | Очередь, счётчики запусков, доля repair, p95 |
 
-**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_DOCKER_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `HTTP_PORT=9000`, `LOG_LEVEL`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
+**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_DOCKER_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_RUN_BUDGET_SEC=170` (должен быть меньше `LLM_SERVICE_TIMEOUT_SEC=180` в `core-api`), `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `HTTP_PORT=9000`, `LOG_LEVEL`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
 
 **Команды** (`make help` покажет все):
 
@@ -170,9 +170,9 @@ uv run python -m tools.eval --limit 3
 | Статус | Значение | Реакция `core-api` |
 |---|---|---|
 | **400** | Некорректный запрос. Не дефолтный 422 FastAPI | Отказ в самом payload |
-| **422** | Вывод модели остался невалидным после repair | Деградация до неадаптированного рецепта |
+| **422** | Вывод модели остался невалидным: repair исчерпан или время вышло после невалидного ответа | Деградация до неадаптированного рецепта |
 | **503** | Очередь полна или провайдер недоступен | «Модель занята», см. клиент |
-| **504** | Таймаут провайдера | «Модель занята», см. клиент |
+| **504** | Таймаут провайдера, модель ни разу не ответила | «Модель занята», см. клиент |
 
 Ошибки наследуют `ServiceError` (`errors.py`) с машинным `code`; обработчики в `main.py` рендерят `{"error": {...}, "request_id": ...}`. У 422 машиночитаемая причина лежит в `detail.reason`.
 
@@ -217,7 +217,7 @@ uv run python -m tools.eval --limit 3
 
 Единственный внешний вызов сервиса — провайдер модели.
 
-- **Таймаут обязателен и явен.** `timeout_s` передаётся на каждый `complete_json`. Без него один зависший запрос держит единственный GPU-слот и превращает всю очередь в 503.
+- **Таймаут обязателен и явен.** `timeout_s` передаётся на каждый `complete_json` и не превышает остаток `LLM_RUN_BUDGET_SEC`. Без него один зависший запрос держит единственный GPU-слот и превращает всю очередь в 503.
 - **Ретраев на уровне клиента нет:** `max_retries=0`. Повторы — это repair-цикл с новым промптом и решение вызывающей стороны. `core-api` по 503 не ретраит в цикле, повторяет пользователь.
 - **Ошибки провайдера переводятся** в `ProviderTimeoutError` или `ProviderUnavailableError`, исключения `openai` за пределы `providers/` не уходят.
 - **Логи — JSON с `request_id`.** В логи идут счётчики и метаданные (число кандидатов, размер инвентаря, retries, latency), как в `usecases/adapt.py`, а не содержимое инвентаря и предпочтений.
