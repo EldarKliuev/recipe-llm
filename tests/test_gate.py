@@ -7,8 +7,9 @@ from typing import Any
 import pytest
 import uvicorn
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
+from app.deps import get_gate
 from app.errors import QueueFullError
 from app.metrics import Metrics
 from app.usecases.gate import GpuGate
@@ -93,6 +94,40 @@ async def test_api_returns_503_with_retry_after_when_the_queue_is_full(make_asyn
     busy = by_status[503]
     assert busy.headers["Retry-After"] == "1"
     assert busy.json()["error"]["code"] == "queue_full"
+
+
+class CountingProvider(FakeProvider):
+    """Records the peak number of calls in flight at once."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.in_flight = 0
+        self.peak = 0
+
+    async def complete_json(self, *args: Any, **kwargs: Any) -> Any:
+        self.in_flight += 1
+        self.peak = max(self.peak, self.in_flight)
+        try:
+            return await super().complete_json(*args, **kwargs)
+        finally:
+            self.in_flight -= 1
+
+
+async def test_api_runs_up_to_max_concurrency_requests_in_parallel(make_app, metrics):
+    gate = GpuGate(max_concurrency=2, queue_wait_sec=5, metrics=metrics)
+    provider = CountingProvider([ADAPTED] * 3, delay_s=0.2)
+    app = make_app(provider)
+    app.dependency_overrides[get_gate] = lambda: gate
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://llm-service") as client:
+        responses = await asyncio.gather(
+            *(client.post("/v1/adapt", json=ADAPT_PAYLOAD) for _ in range(3))
+        )
+
+    assert [response.status_code for response in responses] == [200, 200, 200]
+    # Two slots run side by side; the third request waits for one of them, never a third slot.
+    assert provider.peak == 2
 
 
 class HangingProvider(FakeProvider):
