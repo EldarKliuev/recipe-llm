@@ -10,14 +10,14 @@
 |---|---|---|
 | Каркас, конфиг, JSON-логи с `request_id`, `/health` | Есть, кроме `HTTP_PORT` (TASK-11) | Контейнер: логи в JSON, `X-Request-ID` возвращается |
 | Compose, `extra_hosts`, `workers=1` | Есть | `docker compose config`; образы `dev` и `prod` собираются; в `prod` один мастер и один воркер |
-| `LLMProvider`: lmstudio и cloud | Есть, настоящий провайдер почти без тестов (TASK-06) | `app/providers/base.py` покрыт на 45 %; реальный cloud не проверялся |
+| `LLMProvider`: lmstudio и cloud | Есть, настоящий провайдер покрыт тестами (TASK-06) | `tests/test_providers.py`, покрытие `app/providers/` 100 %; реальный cloud не проверялся |
 | `POST /v1/adapt`: json_schema, repair, таймауты | Есть, общий лимит времени добавлен (TASK-01) | `tests/test_adapt.py` |
 | Семафор, очередь, 503 с `Retry-After` | Есть, слот освобождается при уходе клиента (TASK-02) | `test_api_returns_503_with_retry_after_when_the_queue_is_full`, `test_dropped_client_frees_the_slot_for_the_next_request` |
 | `POST /v1/parse-ingredients` | Есть, ingest шлёт батчи по 20 (TASK-05) | `tests/test_parse.py`; замер на `qwen/qwen3.5-9b` от 2026-11-10 |
 | `tools/eval`: 30 фикстур, метрики, CSV | Есть, текущая модель прогнана (TASK-04) | `tests/test_eval_fixtures.py`; прогон `qwen/qwen3.5-9b` с `prompt_version=v1` от 2026-11-06 |
 | `/ready`, `/metrics-lite` | Есть, у `/ready` нет явного таймаута (TASK-03) | `tests/test_ops.py`, контейнер |
 | Метаданные каждого прогона | Только при успехе (TASK-07) | Код `runner.py`, `recipe-core/internal/cook/worker.go:177` |
-| Тесты: промпт, схема, семафор, repair, live-smoke | Есть | 60 passed; `test_live_adapt_against_lm_studio` прошёл на `qwen/qwen3.5-9b` |
+| Тесты: промпт, схема, семафор, repair, live-smoke | Есть | 72 passed; `test_live_adapt_against_lm_studio` прошёл на `qwen/qwen3.5-9b` |
 
 ## P0 — блокирует работу с моделью
 
@@ -100,6 +100,7 @@
 
 ### TASK-06. Тесты настоящего провайдера
 
+- **Статус:** сделано 2026-11-10, кроме проверки на реальном cloud endpoint. `tests/test_providers.py` гоняет настоящий SDK поверх `httpx.MockTransport`; транспорт подменяется через `with_options`, поэтому тесты видят настройки конструктора. Покрытие `app/providers/` — 100 %. Тесты ловят три мутации: `max_retries=2`, потерю `timeout` и таймаут, переведённый в 503. `LLM_PROVIDER=cloud` на реальном endpoint не проверялся.
 - **Проблема:** тесты подменяют провайдера целиком, поэтому не проверяется код, через который идёт каждый вызов модели: перевод ошибок `openai` в 503/504, `response_format`, `max_retries=0`, передача `timeout`, `extract_json_object`, выбор класса в `create_provider`.
 - **Подтверждено:** покрытие `app/providers/base.py` — 45 %, `app/providers/__init__.py` — 75 %.
 - **Сделать:** тесты с поддельным HTTP-транспортом, без новых зависимостей и без настоящей модели. Отдельно один раз проверить `LLM_PROVIDER=cloud` на реальном endpoint: нужен ключ.
