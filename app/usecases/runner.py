@@ -39,7 +39,9 @@ async def run_structured[T: BaseModel](
     `timeout_s` caps one attempt, `budget_s` the whole run with the queue wait included: core-api
     stops waiting at its own timeout and would report "model busy". A timeout after an invalid
     answer is therefore a 422, which core-api degrades on, while a model that never answered is
-    a 504. `asyncio.timeout` enforces the limit because the HTTP client's timeout only bounds
+    a 504. The 422 `detail.meta` carries the same `RunMeta` as a success, because core-api records
+    failed runs in generation_runs too; a 504 has none, as no answer named the model.
+    `asyncio.timeout` enforces the limit because the HTTP client's timeout only bounds
     each read, not the whole request.
     """
     deadline = asyncio.get_running_loop().time() + budget_s
@@ -75,8 +77,23 @@ async def _attempt_loop[T: BaseModel](
     total_latency_ms = 0
     prompt_tokens = 0
     completion_tokens = 0
+    model = ""
     last_error: str | None = None
     last_raw = ""
+
+    def run_meta() -> RunMeta:
+        # `slot.retries` is the index of the last attempt started, so a repair attempt that
+        # timed out still counts; latency and tokens only cover the attempts that answered.
+        return RunMeta(
+            provider=provider.name,
+            model=model,
+            prompt_version=PROMPT_VERSION,
+            latency_ms=total_latency_ms,
+            queue_wait_ms=slot.queue_wait_ms,
+            retries=slot.retries,
+            prompt_tokens=prompt_tokens or None,
+            completion_tokens=completion_tokens or None,
+        )
 
     for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
         remaining = deadline - loop.time()
@@ -99,6 +116,7 @@ async def _attempt_loop[T: BaseModel](
             total_latency_ms, prompt_tokens, completion_tokens = _accumulate(
                 exc.meta, total_latency_ms, prompt_tokens, completion_tokens
             )
+            model = exc.meta.model
             last_error, last_raw = exc.message, exc.raw
             log.warning(
                 "model output unparsable",
@@ -110,6 +128,7 @@ async def _attempt_loop[T: BaseModel](
         total_latency_ms, prompt_tokens, completion_tokens = _accumulate(
             meta, total_latency_ms, prompt_tokens, completion_tokens
         )
+        model = meta.model
 
         try:
             value = output_model.model_validate(data)
@@ -134,22 +153,17 @@ async def _attempt_loop[T: BaseModel](
             current_user = build_repair_user(user, last_raw, last_error)
             continue
 
-        return value, RunMeta(
-            provider=provider.name,
-            model=meta.model,
-            prompt_version=PROMPT_VERSION,
-            latency_ms=total_latency_ms,
-            queue_wait_ms=slot.queue_wait_ms,
-            retries=attempt,
-            prompt_tokens=prompt_tokens or None,
-            completion_tokens=completion_tokens or None,
-        )
+        return value, run_meta()
 
     if last_error is None:
         raise ProviderTimeoutError("model did not answer in time")
     raise ModelOutputInvalidError(
         "model output still invalid: repair attempts or the run budget exhausted",
-        detail={"reason": last_error, "raw_excerpt": last_raw[:500]},
+        detail={
+            "reason": last_error,
+            "raw_excerpt": last_raw[:500],
+            "meta": run_meta().model_dump(),
+        },
     )
 
 
