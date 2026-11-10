@@ -16,7 +16,7 @@
 | `POST /v1/parse-ingredients` | Есть, ingest шлёт батчи по 20 (TASK-05) | `tests/test_parse.py`; замер на `qwen/qwen3.5-9b` от 2026-11-10 |
 | `tools/eval`: 30 фикстур, метрики, CSV | Есть, текущая модель прогнана (TASK-04) | `tests/test_eval_fixtures.py`; прогон `qwen/qwen3.5-9b` с `prompt_version=v1` от 2026-11-06 |
 | `/ready`, `/metrics-lite` | Есть, у `/ready` нет явного таймаута (TASK-03) | `tests/test_ops.py`, контейнер |
-| Метаданные каждого прогона | Только при успехе (TASK-07) | Код `runner.py`, `recipe-core/internal/cook/worker.go:177` |
+| Метаданные каждого прогона | Есть, при 422 — в `error.detail.meta` (TASK-07) | `test_persistently_invalid_output_gives_422_for_core_api_to_degrade`, `test_timeout_after_an_invalid_answer_gives_422_not_504` |
 | Тесты: промпт, схема, семафор, repair, live-smoke | Есть | 72 passed; `test_live_adapt_against_lm_studio` прошёл на `qwen/qwen3.5-9b` |
 
 ## P0 — блокирует работу с моделью
@@ -108,6 +108,7 @@
 
 ### TASK-07. Отдавать метаданные неудачного прогона
 
+- **Статус:** сделано 2026-11-10. При 422 тело содержит `error.detail.meta` с тем же `RunMeta`, что и успешный ответ; `reason` и `raw_excerpt` на месте. В `retries` входит и repair-попытка, оборванная таймаутом, а задержка и токены считаются только по ответившим попыткам. У 504 и 503 метаданных нет: модель не ответила, имени модели взять неоткуда. Парная правка в `recipe-core` — ветка `llm-failed-run-meta`.
 - **Проблема:** план требует метаданные каждого прогона, но `RunMeta` есть только в успешном ответе. При 422 `core-api` пишет в `generation_runs` пустые модель, версию промпта, токены и retries (`worker.go:177`), хотя именно эти прогоны интереснее всего разбирать.
 - **Сделать:** добавить метаданные в тело ошибки, например `error.detail.meta`.
 - **Меняет контракт (§12):** сначала согласовать. `readErrorDetail` в `llmclient.go` сейчас отбрасывает `detail`, поэтому нужна парная правка в `recipe-core`.

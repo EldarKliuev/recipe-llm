@@ -4,6 +4,7 @@ from time import perf_counter
 
 import pytest
 
+from app.domain.prompts import PROMPT_VERSION
 from app.domain.schemas import AdaptedRecipe
 from app.errors import ProviderTimeoutError, ProviderUnavailableError
 from app.usecases.runner import run_structured
@@ -86,6 +87,18 @@ def test_persistently_invalid_output_gives_422_for_core_api_to_degrade(make_clie
     assert body["error"]["code"] == "invalid_model_output"
     assert "repair attempts" in body["error"]["message"]
     assert len(provider.calls) == 3  # one attempt plus two repairs
+    # core-api stores these in generation_runs: failed runs are the ones worth analysing.
+    meta = body["error"]["detail"]["meta"]
+    assert meta == {
+        "provider": "fake",
+        "model": "fake-model",
+        "prompt_version": PROMPT_VERSION,
+        "latency_ms": 21,  # all three answers counted
+        "queue_wait_ms": meta["queue_wait_ms"],
+        "retries": 2,
+        "prompt_tokens": 300,
+        "completion_tokens": 150,
+    }
 
 
 def test_model_that_keeps_inventing_ids_eventually_fails(make_client):
@@ -157,8 +170,13 @@ def test_timeout_after_an_invalid_answer_gives_422_not_504(make_client):
     response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
 
     assert response.status_code == 422
-    assert "not json" in response.json()["error"]["detail"]["reason"]
+    detail = response.json()["error"]["detail"]
+    assert "not json" in detail["reason"]
     assert len(provider.calls) == 2
+    # The repair attempt that timed out still counts; only the answered one has latency and tokens.
+    assert detail["meta"]["retries"] == 1
+    assert detail["meta"]["latency_ms"] == 7
+    assert detail["meta"]["prompt_tokens"] == 100
 
 
 def test_unreachable_provider_after_an_invalid_answer_stays_503(make_client):
