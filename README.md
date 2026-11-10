@@ -136,7 +136,7 @@ routes/  →  usecases/{adapt,parse}.py  →  usecases/runner.py  →  usecases/
 | `LLM_API_KEY` | `lm-studio` | Ключ провайдера; в логи не пишется |
 | `LLM_TIMEOUT_SEC` | `120` | Таймаут одного вызова модели |
 | `LLM_RUN_BUDGET_SEC` | `170` | Общий лимит на запрос вместе с очередью; должен быть меньше `LLM_SERVICE_TIMEOUT_SEC=180` в `core-api` |
-| `LLM_MAX_CONCURRENCY` | `1` | Одновременных вызовов модели |
+| `LLM_MAX_CONCURRENCY` | `1` | Одновременных вызовов модели. Должно совпадать с параллельностью бэкенда: для LM Studio это колонка `PARALLEL` в `lms ps` (`lms load --parallel N`). `ADAPT_WORKERS` в `core-api` не больше этого числа |
 | `LLM_QUEUE_WAIT_SEC` | `30` | Сколько ждать слот до 503 |
 | `LLM_MAX_TOKENS` | `1536` | Лимит токенов ответа |
 | `HTTP_PORT` | `9000` | Пока ни на что не влияет: порт зашит в Dockerfile, Compose и Makefile |
