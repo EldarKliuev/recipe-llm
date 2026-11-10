@@ -129,9 +129,13 @@ async def main(argv: list[str] | None = None) -> int:
     cases = json.loads(args.fixtures.read_text())
     if args.limit:
         cases = cases[: args.limit]
+    if not cases:
+        # A run without cases measures nothing and would add a meaningless row to summary.csv.
+        print(f"eval: no cases in {args.fixtures}", file=sys.stderr)
+        return 2
 
     settings = get_settings()
-    metrics = Metrics(window=len(cases) or 1)
+    metrics = Metrics(window=len(cases))
     provider = create_provider(settings)
     gate = GpuGate(
         max_concurrency=settings.llm_max_concurrency,
