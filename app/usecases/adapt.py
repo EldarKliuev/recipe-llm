@@ -25,7 +25,9 @@ async def adapt_recipe(
                 f"base_recipe_id {recipe.base_recipe_id} is not one of the candidate "
                 f"recipes {sorted(allowed_ids)}"
             )
-        if not recipe.steps:
+        # Same rule as core-api: it drops blank steps and rejects the answer only when
+        # nothing is left, so a single blank step is not worth a repair attempt.
+        if not any(step.strip() for step in recipe.steps):
             return "steps must not be empty"
         return None
 
