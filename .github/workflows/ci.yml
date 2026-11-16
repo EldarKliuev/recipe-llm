@@ -16,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v6
+      # setup-uv publishes no major tag since v8, so the exact release is pinned.
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
