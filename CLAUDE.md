@@ -116,7 +116,7 @@ git fetch origin main -q && git diff --name-only origin/main...HEAD
 | GET | `/ready` | Провайдер показывает `LLM_MODEL` в списке моделей |
 | GET | `/metrics-lite` | Очередь, счётчики запусков, доля repair, p95 |
 
-**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_DOCKER_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_RUN_BUDGET_SEC=170` (должен быть меньше `LLM_SERVICE_TIMEOUT_SEC=180` в `core-api`), `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `HTTP_PORT=9000`, `LOG_LEVEL`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
+**Окружение:** `LLM_PROVIDER=lmstudio|cloud`, `LLM_BASE_URL`, `LLM_DOCKER_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SEC=120`, `LLM_RUN_BUDGET_SEC=170` (должен быть меньше `LLM_SERVICE_TIMEOUT_SEC=180` в `core-api`), `LLM_MAX_CONCURRENCY=1`, `LLM_QUEUE_WAIT_SEC=30`, `LLM_MAX_TOKENS`, `LOG_LEVEL`. Порт сервиса не настраивается: 9000 зашит в `Dockerfile` и `docker-compose.yml`, и `core-api` ходит на `llm-service:9000`. Compose подключает `extra_hosts: ["host.docker.internal:host-gateway"]`, чтобы контейнер видел LM Studio на хосте.
 
 **Команды** (`make help` покажет все):
 

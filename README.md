@@ -139,7 +139,6 @@ routes/  →  usecases/{adapt,parse}.py  →  usecases/runner.py  →  usecases/
 | `LLM_MAX_CONCURRENCY` | `1` | Одновременных вызовов модели. Должно совпадать с параллельностью бэкенда: для LM Studio это колонка `PARALLEL` в `lms ps` (`lms load --parallel N`). `ADAPT_WORKERS` в `core-api` не больше этого числа |
 | `LLM_QUEUE_WAIT_SEC` | `30` | Сколько ждать слот до 503 |
 | `LLM_MAX_TOKENS` | `1536` | Лимит токенов ответа |
-| `HTTP_PORT` | `9000` | Пока ни на что не влияет: порт зашит в Dockerfile, Compose и Makefile |
 | `LOG_LEVEL` | `INFO` | Уровень логов |
 
 ## Разработка

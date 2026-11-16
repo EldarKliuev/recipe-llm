@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     llm_queue_wait_sec: float = Field(default=30.0, gt=0)
     llm_max_tokens: int = Field(default=1536, gt=0)
 
-    http_port: int = 9000
     log_level: str = "INFO"
 
 
