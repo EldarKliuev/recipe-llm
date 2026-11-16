@@ -131,7 +131,7 @@ make llm-check   # доступен ли LLM_BASE_URL и есть ли LLM_MODEL
 make check       # lint + test + llm-check; без запущенной модели упадёт
 make test-live   # smoke-тест против настоящего LM Studio
 make eval-local  # eval с хоста (make eval — в контейнере)
-make up          # compose; нужна внешняя сеть recipe-net из корневого Makefile
+make up          # compose; нужна внешняя сеть recipe-net: make -C ../recipe-core network
 ```
 
 Один тест:

@@ -1,5 +1,6 @@
 # llm-service shortcuts. Local targets run on the host via uv; compose targets run
-# in the container. The shared recipe-net network is created by the root Makefile.
+# in the container. The shared recipe-net network is created by `make network` in
+# ../recipe-core (or ../recipe-web), never from this repo.
 
 SHELL := /bin/bash
 COMPOSE ?= docker compose
@@ -51,7 +52,7 @@ llm-check: ## Is LM Studio at LLM_BASE_URL reachable and LLM_MODEL listed
 
 up: ## Start the service in the background (needs .env and recipe-net)
 	@docker network inspect recipe-net > /dev/null 2>&1 \
-		|| { echo "recipe-net is missing: create it from the root Makefile first"; exit 1; }
+		|| { echo "recipe-net is missing: run 'make -C ../recipe-core network' first"; exit 1; }
 	$(COMPOSE) up -d --build
 
 down: ## Stop the service

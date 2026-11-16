@@ -44,7 +44,7 @@ make adapt
 
 ### В Docker
 
-Контейнер подключается к внешней сети `recipe-net`, которую создаёт корневой Makefile проекта Recipe AI. LM Studio остаётся на хосте и в Compose не входит.
+Контейнер подключается к внешней сети `recipe-net`, которую создаёт `make network` в `recipe-core` или `recipe-web` (отсюда: `make -C ../recipe-core network`). LM Studio остаётся на хосте и в Compose не входит.
 
 ```bash
 make up
