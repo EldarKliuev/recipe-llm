@@ -164,7 +164,7 @@ make help
 uv run pytest tests/test_gate.py::test_queue_wait_timeout_raises_queue_full
 ```
 
-CI в репозитории нет, поэтому перед коммитом обязательно запусти `make lint` и `make test`.
+CI (`.github/workflows/ci.yml`) запускает `make lint` и `make test` на каждом PR и пуше в `main`. Перед коммитом всё равно запусти их локально: так ошибка найдётся раньше, а live-тест и eval в CI не входят.
 
 ## Eval
 
