@@ -8,7 +8,7 @@
 
 | Пункт плана | Статус | Чем проверено |
 |---|---|---|
-| Каркас, конфиг, JSON-логи с `request_id`, `/health` | Есть, кроме `HTTP_PORT` (TASK-11) | Контейнер: логи в JSON, `X-Request-ID` возвращается |
+| Каркас, конфиг, JSON-логи с `request_id`, `/health` | Есть; порт не настраивается, `HTTP_PORT` удалён (TASK-11) | Контейнер: логи в JSON, `X-Request-ID` возвращается |
 | Compose, `extra_hosts`, `workers=1` | Есть | `docker compose config`; образы `dev` и `prod` собираются; в `prod` один мастер и один воркер |
 | `LLMProvider`: lmstudio и cloud | Есть, настоящий провайдер покрыт тестами (TASK-06) | `tests/test_providers.py`, покрытие `app/providers/` 100 %; реальный cloud не проверялся |
 | `POST /v1/adapt`: json_schema, repair, таймауты | Есть, общий лимит времени добавлен (TASK-01) | `tests/test_adapt.py` |
@@ -146,6 +146,7 @@
 
 ### TASK-11. `HTTP_PORT` ни на что не влияет
 
+- **Статус:** сделано 2026-11-16. Переменная удалена из `Settings`, `.env.example`, `CLAUDE.md` и `README.md`; порт остаётся 9000, как его ждёт `core-api`.
 - **Проблема:** переменная есть в плане, `.env.example` и `Settings`, но порт зашит в `Dockerfile`, `docker-compose.yml` и `Makefile`. Изменение в `.env` молча игнорируется.
 - **Сделать:** либо подключить, либо удалить из настроек, `.env.example` и `CLAUDE.md`. Рекомендация — удалить: порт внутренний, и `core-api` ходит на `:9000`.
 - **Файлы:** `app/config.py`, `.env.example`, `CLAUDE.md`.
