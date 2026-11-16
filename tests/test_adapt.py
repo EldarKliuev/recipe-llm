@@ -78,6 +78,29 @@ def test_invented_base_recipe_id_is_rejected_and_repaired(make_client):
     assert "999999 is not one of the candidate recipes" in provider.calls[1]["user"]
 
 
+@pytest.mark.parametrize("steps", [[], [""], ["  ", "\n"]], ids=["none", "blank", "whitespace"])
+def test_empty_steps_are_rejected_and_repaired(make_client, steps):
+    # core-api rejects such an answer as empty_steps and starts a whole new generation.
+    provider = FakeProvider([{**ADAPTED, "steps": steps}, ADAPTED])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["meta"]["retries"] == 1
+    assert response.json()["recipe"]["steps"] == ADAPTED["steps"]
+    assert "steps must not be empty" in provider.calls[1]["user"]
+
+
+def test_one_blank_step_among_real_ones_is_not_worth_a_repair(make_client):
+    # core-api drops blank steps itself, so a repair here would only spend GPU time.
+    steps = ["Boil the pasta.", "", "Toss and serve."]
+    provider = FakeProvider([{**ADAPTED, "steps": steps}])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["meta"]["retries"] == 0
+    assert len(provider.calls) == 1
+
+
 def test_persistently_invalid_output_gives_422_for_core_api_to_degrade(make_client):
     provider = FakeProvider(["{", "{", "{"])
     response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)

@@ -54,6 +54,29 @@ def test_rewritten_raw_line_is_repaired(make_client):
     assert "item 0 `raw` must repeat the input line verbatim" in provider.calls[1]["user"]
 
 
+def test_blank_name_is_repaired(make_client):
+    blank = {
+        "items": [PARSED["items"][0], {**PARSED["items"][1], "name": "  "}, PARSED["items"][2]]
+    }
+    provider = FakeProvider([blank, PARSED])
+    response = make_client(provider).post("/v1/parse-ingredients", json={"lines": LINES})
+
+    assert response.status_code == 200
+    assert response.json()["meta"]["retries"] == 1
+    assert response.json()["items"][1]["name"] == "olive oil"
+    assert "item 1 has an empty `name`" in provider.calls[1]["user"]
+
+
+def test_blank_name_that_is_never_fixed_gives_422(make_client):
+    blank = {"items": [{**PARSED["items"][0], "name": ""}, *PARSED["items"][1:]]}
+    provider = FakeProvider([blank, blank, blank])
+    response = make_client(provider).post("/v1/parse-ingredients", json={"lines": LINES})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["detail"]["reason"] == "item 0 has an empty `name`"
+    assert len(provider.calls) == 3
+
+
 def test_batch_is_capped(make_client):
     response = make_client(FakeProvider([PARSED])).post(
         "/v1/parse-ingredients", json={"lines": ["salt"] * 51}

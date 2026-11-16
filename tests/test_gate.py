@@ -130,6 +130,32 @@ async def test_api_runs_up_to_max_concurrency_requests_in_parallel(make_app, met
     assert provider.peak == 2
 
 
+async def test_slot_is_held_through_repair_so_a_queued_request_waits(make_app, metrics):
+    gate = GpuGate(max_concurrency=1, queue_wait_sec=5, metrics=metrics)
+    provider = CountingProvider(["not json {", ADAPTED, ADAPTED], delay_s=0.1)
+    app = make_app(provider)
+    app.dependency_overrides[get_gate] = lambda: gate
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://llm-service") as client:
+        repaired = asyncio.create_task(client.post("/v1/adapt", json=ADAPT_PAYLOAD))
+        assert await wait_until(lambda: len(provider.calls) == 1)
+        queued = asyncio.create_task(client.post("/v1/adapt", json=ADAPT_PAYLOAD))
+        # The second request is parked in the queue while the first one's broken answer is due.
+        assert await wait_until(lambda: metrics.queue_depth == 1)
+        first, second = await asyncio.gather(repaired, queued)
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert first.json()["meta"]["retries"] == 1
+    assert second.json()["meta"]["retries"] == 0
+    # The repair attempt went straight after the broken answer: the queued request did not
+    # slip in between, so the model never saw two runs interleaved.
+    assert "was rejected" in provider.calls[1]["user"]
+    assert "was rejected" not in provider.calls[2]["user"]
+    assert provider.peak == 1
+    assert second.json()["meta"]["queue_wait_ms"] >= 150  # waited out both attempts
+
+
 class HangingProvider(FakeProvider):
     """Answers after `delay_s` and records whether the call was cancelled on the way."""
 
