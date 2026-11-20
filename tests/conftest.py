@@ -20,6 +20,7 @@ ADAPTED = {
     "base_recipe_id": 1001,
     "title": "Garlic Oil Spaghetti",
     "steps": ["Boil the pasta.", "Warm garlic in oil.", "Toss and serve."],
+    "step_minutes": [10, None, None],
     "used_ingredients": ["spaghetti", "garlic", "olive oil"],
     "missing_ingredients": ["parsley"],
     "substitutions": [

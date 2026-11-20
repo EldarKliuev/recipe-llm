@@ -29,6 +29,13 @@ async def adapt_recipe(
         # nothing is left, so a single blank step is not worth a repair attempt.
         if not any(step.strip() for step in recipe.steps):
             return "steps must not be empty"
+        # core-api pairs minutes with steps by index; a shifted list puts a timer on
+        # the wrong step. Value ranges are core-api's call, it drops the field instead.
+        if len(recipe.step_minutes) != len(recipe.steps):
+            return (
+                f"step_minutes must have one entry per step: got {len(recipe.step_minutes)} "
+                f"for {len(recipe.steps)} steps"
+            )
         return None
 
     recipe, meta = await run_structured(
