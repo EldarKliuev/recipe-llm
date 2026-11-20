@@ -73,3 +73,16 @@ def test_adapt_request_defaults_prefs():
     request = AdaptRequest(recipes=[recipe], inventory=["a"])
     assert request.prefs.allergies == []
     assert request.prefs.servings is None
+
+
+def test_adapt_request_defaults_to_english_so_older_core_api_keeps_working():
+    recipe = {"id": 1, "title": "x", "ingredients": ["a"], "steps": ["b"]}
+    assert AdaptRequest(recipes=[recipe], inventory=["a"]).language == "en"
+    assert AdaptRequest(recipes=[recipe], inventory=["a"], language="ru").language == "ru"
+
+
+def test_adapt_request_rejects_a_language_core_api_does_not_normalise_to():
+    # core-api maps Accept-Language to en or ru; anything else is its bug, not a hint.
+    recipe = {"id": 1, "title": "x", "ingredients": ["a"], "steps": ["b"]}
+    with pytest.raises(ValidationError):
+        AdaptRequest(recipes=[recipe], inventory=["a"], language="de")

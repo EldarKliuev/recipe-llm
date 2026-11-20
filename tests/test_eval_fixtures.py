@@ -46,7 +46,7 @@ def test_summary_reports_rates_over_all_cases_including_refusals():
         CaseResult(case_id="c", status="invalid_model_output", error="gave up"),
     ]
 
-    summary = summarise(results, provider_name="lmstudio", model="m")
+    summary = summarise(results, provider_name="lmstudio", model="m", language="en")
 
     assert summary["cases"] == 3
     assert summary["refusals"] == 1
@@ -154,3 +154,37 @@ async def test_new_summary_columns_rewrite_an_older_header_instead_of_shifting(e
     assert new["model"] == "fake-model"
     assert new["copied_steps_total"] == "0"
     assert None not in new
+
+
+async def test_language_flag_asks_every_case_in_that_language_and_is_recorded(eval_env):
+    # Inputs stay English, as the corpus does in production; only the answer changes.
+    tmp_path, results_dir, use_provider = eval_env
+    fixtures = tmp_path / "cases.json"
+    fixtures.write_text(json.dumps([{"id": "good", **ADAPT_PAYLOAD}]))
+    provider = FakeProvider([ADAPTED])
+    use_provider(provider)
+
+    assert await eval_main.main(["--fixtures", str(fixtures), "--language", "ru"]) == 0
+
+    assert '"language": "Russian"' in provider.calls[0]["user"]
+    [cases_path] = results_dir.glob("*_cases.csv")
+    [row] = _read_csv(cases_path)
+    assert row["language"] == "ru"
+    # The fake answers in English, so all three steps are off-language.
+    assert row["off_language_steps"].count("|") == 2
+    [summary] = _read_csv(results_dir / "summary.csv")
+    assert summary["language"] == "ru"
+    assert summary["off_language_steps_total"] == "3"
+
+
+async def test_eval_defaults_to_english(eval_env):
+    tmp_path, results_dir, use_provider = eval_env
+    fixtures = tmp_path / "cases.json"
+    fixtures.write_text(json.dumps([{"id": "good", **ADAPT_PAYLOAD}]))
+    use_provider(FakeProvider([ADAPTED]))
+
+    assert await eval_main.main(["--fixtures", str(fixtures)]) == 0
+
+    [summary] = _read_csv(results_dir / "summary.csv")
+    assert summary["language"] == "en"
+    assert summary["off_language_steps_total"] == "0"

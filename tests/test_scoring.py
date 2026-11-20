@@ -2,6 +2,7 @@ from app.domain.schemas import AdaptedRecipe, RetrievedRecipe
 from tools.eval.scoring import (
     count_allergen_violations,
     count_copied_steps,
+    count_off_language_steps,
     count_out_of_inventory,
     same_food,
 )
@@ -87,3 +88,13 @@ def test_rewritten_steps_are_not_counted_as_copies():
 def test_punctuation_only_steps_never_count_as_copies():
     # Both sides normalise to an empty string; that is not copied dataset text.
     assert count_copied_steps(recipe(steps=["..."]), [source(["-"])]) == []
+
+
+def test_off_language_steps_are_english_steps_in_a_russian_answer():
+    answer = recipe(steps=["Отварите пасту 10 минут.", "Toss with garlic.", "Подавайте."])
+    assert count_off_language_steps(answer, "ru") == ["Toss with garlic."]
+
+
+def test_off_language_steps_are_russian_steps_in_an_english_answer():
+    answer = recipe(steps=["Boil the pasta.", "Подавайте."])
+    assert count_off_language_steps(answer, "en") == ["Подавайте."]

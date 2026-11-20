@@ -170,3 +170,14 @@ def count_copied_steps(recipe: AdaptedRecipe, sources: list[RetrievedRecipe]) ->
 
 def _step_key(step: str) -> str:
     return " ".join(normalise(step).split())
+
+
+_CYRILLIC = re.compile("[\u0400-\u04ff]")
+
+
+def count_off_language_steps(recipe: AdaptedRecipe, language: str) -> list[str]:
+    """Steps not written in the requested language: without Cyrillic for Russian, with it
+    for English. Mixed text passes as Russian, so this catches whole untranslated steps."""
+    if language == "ru":
+        return [step for step in recipe.steps if not _CYRILLIC.search(step)]
+    return [step for step in recipe.steps if _CYRILLIC.search(step)]

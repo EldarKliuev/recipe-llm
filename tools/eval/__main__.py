@@ -26,6 +26,7 @@ from app.usecases.gate import GpuGate
 from tools.eval.scoring import (
     count_allergen_violations,
     count_copied_steps,
+    count_off_language_steps,
     count_out_of_inventory,
 )
 
@@ -44,6 +45,7 @@ class CaseResult:
     allergen_violations: list[str] = field(default_factory=list)
     out_of_inventory: list[str] = field(default_factory=list)
     copied_steps: list[str] = field(default_factory=list)
+    off_language_steps: list[str] = field(default_factory=list)
     missing_count: int | None = None
     steps_count: int | None = None
     error: str = ""
@@ -69,12 +71,15 @@ async def run_case(case: dict, *, provider, gate, timeout_s: float, budget_s: fl
         allergen_violations=count_allergen_violations(recipe, request.prefs.allergies),
         out_of_inventory=count_out_of_inventory(recipe, request.inventory),
         copied_steps=count_copied_steps(recipe, request.recipes),
+        off_language_steps=count_off_language_steps(recipe, request.language),
         missing_count=len(recipe.missing_ingredients),
         steps_count=len(recipe.steps),
     )
 
 
-def summarise(results: list[CaseResult], *, provider_name: str, model: str) -> dict[str, object]:
+def summarise(
+    results: list[CaseResult], *, provider_name: str, model: str, language: str
+) -> dict[str, object]:
     done = [result for result in results if result.status == "ok"]
     latencies = sorted(result.latency_ms for result in done if result.latency_ms is not None)
     refusals = len(results) - len(done)
@@ -83,6 +88,7 @@ def summarise(results: list[CaseResult], *, provider_name: str, model: str) -> d
         "provider": provider_name,
         "model": model,
         "prompt_version": PROMPT_VERSION,
+        "language": language,
         "cases": len(results),
         "refusals": refusals,
         "refusal_rate": _rate(refusals, len(results)),
@@ -95,6 +101,7 @@ def summarise(results: list[CaseResult], *, provider_name: str, model: str) -> d
         "cases_with_out_of_inventory": sum(1 for result in results if result.out_of_inventory),
         "copied_steps_total": sum(len(result.copied_steps) for result in results),
         "cases_with_copied_steps": sum(1 for result in results if result.copied_steps),
+        "off_language_steps_total": sum(len(result.off_language_steps) for result in results),
         "latency_ms_median": int(percentile(latencies, 0.5)) if latencies else "",
         "latency_ms_p95": int(percentile(latencies, 0.95)) if latencies else "",
     }
@@ -110,14 +117,22 @@ def write_csv(results: list[CaseResult], summary: dict[str, object], stamp: str)
     with cases_path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["model", "prompt_version", *(field_name for field_name in asdict(results[0]))]
+            [
+                "model",
+                "prompt_version",
+                "language",
+                *(field_name for field_name in asdict(results[0])),
+            ]
         )
         for result in results:
             row = asdict(result)
             row["allergen_violations"] = "|".join(result.allergen_violations)
             row["out_of_inventory"] = "|".join(result.out_of_inventory)
             row["copied_steps"] = "|".join(result.copied_steps)
-            writer.writerow([summary["model"], summary["prompt_version"], *row.values()])
+            row["off_language_steps"] = "|".join(result.off_language_steps)
+            writer.writerow(
+                [summary["model"], summary["prompt_version"], summary["language"], *row.values()]
+            )
 
     _append_summary(RESULTS_DIR / "summary.csv", summary)
     return cases_path
@@ -149,11 +164,18 @@ async def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="tools.eval", description=__doc__)
     parser.add_argument("--fixtures", type=Path, default=FIXTURES)
     parser.add_argument("--limit", type=int, default=0, help="run only the first N cases")
+    parser.add_argument(
+        "--language",
+        choices=["en", "ru"],
+        default="en",
+        help="answer language for every case; inputs stay English, as the corpus does",
+    )
     args = parser.parse_args(argv)
 
     cases = json.loads(args.fixtures.read_text())
     if args.limit:
         cases = cases[: args.limit]
+    cases = [case | {"language": args.language} for case in cases]
     if not cases:
         # A run without cases measures nothing and would add a meaningless row to summary.csv.
         print(f"eval: no cases in {args.fixtures}", file=sys.stderr)
@@ -171,7 +193,7 @@ async def main(argv: list[str] | None = None) -> int:
 
     print(
         f"eval: {len(cases)} cases, provider={settings.llm_provider}, "
-        f"model={settings.llm_model}, prompt_version={PROMPT_VERSION}",
+        f"model={settings.llm_model}, prompt_version={PROMPT_VERSION}, language={args.language}",
         flush=True,
     )
     results: list[CaseResult] = []
@@ -190,13 +212,19 @@ async def main(argv: list[str] | None = None) -> int:
                 f"retries={result.retries} latency_ms={result.latency_ms} "
                 f"allergens={len(result.allergen_violations)} "
                 f"out_of_inventory={len(result.out_of_inventory)} "
-                f"copied_steps={len(result.copied_steps)}",
+                f"copied_steps={len(result.copied_steps)} "
+                f"off_language_steps={len(result.off_language_steps)}",
                 flush=True,
             )
     finally:
         await provider.aclose()
 
-    summary = summarise(results, provider_name=settings.llm_provider, model=settings.llm_model)
+    summary = summarise(
+        results,
+        provider_name=settings.llm_provider,
+        model=settings.llm_model,
+        language=args.language,
+    )
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     cases_path = write_csv(results, summary, stamp)
 

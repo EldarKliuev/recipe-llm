@@ -132,6 +132,70 @@ def test_step_minutes_that_never_match_the_steps_give_422(make_client):
     assert "step_minutes" in response.json()["error"]["detail"]["reason"]
 
 
+RUSSIAN = ADAPTED | {
+    "title": "Спагетти с чесночным маслом",
+    "steps": ["Отварите пасту.", "Прогрейте чеснок в масле.", "Перемешайте и подавайте."],
+    "substitutions": [
+        {"missing": "parsley", "replace_with": "chili flakes", "note": "Даёт ту же свежесть."}
+    ],
+}
+
+
+def test_language_reaches_the_model_and_russian_text_comes_back(make_client):
+    provider = FakeProvider([RUSSIAN])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD | {"language": "ru"})
+
+    assert response.status_code == 200
+    assert response.json()["recipe"]["steps"] == RUSSIAN["steps"]
+    assert '"language": "Russian"' in provider.calls[0]["user"]
+    assert response.json()["meta"]["retries"] == 0
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("used_ingredients", ["спагетти", "garlic", "olive oil"]),
+        ("missing_ingredients", ["петрушка"]),
+        (
+            "substitutions",
+            [{"missing": "parsley", "replace_with": "хлопья чили", "note": "Подходит."}],
+        ),
+    ],
+    ids=["used", "missing", "substitution"],
+)
+def test_translated_ingredient_names_are_repaired(make_client, field, value):
+    # core-api checks names against an English catalog: a Russian name would be
+    # rejected there as an off-catalog product.
+    provider = FakeProvider([RUSSIAN | {field: value}, RUSSIAN])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD | {"language": "ru"})
+
+    assert response.status_code == 200
+    assert response.json()["meta"]["retries"] == 1
+    repair = provider.calls[1]["user"]
+    assert "must stay in English" in repair
+    # Otherwise the model "fixes" the names by rewriting the whole answer in English.
+    assert "Write title, steps and notes in Russian" in repair.split("Validation error:")[1]
+
+
+def test_ingredient_names_that_stay_translated_give_422(make_client):
+    bad = RUSSIAN | {"missing_ingredients": ["петрушка"]}
+    provider = FakeProvider([bad, bad, bad])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD | {"language": "ru"})
+
+    assert response.status_code == 422
+    assert len(provider.calls) == 3
+    assert "петрушка" in response.json()["error"]["detail"]["reason"]
+
+
+def test_unknown_language_is_400_and_never_reaches_the_model(make_client):
+    provider = FakeProvider([ADAPTED])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD | {"language": "de"})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_request"
+    assert provider.calls == []
+
+
 def test_persistently_invalid_output_gives_422_for_core_api_to_degrade(make_client):
     provider = FakeProvider(["{", "{", "{"])
     response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)

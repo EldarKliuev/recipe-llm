@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,12 +28,19 @@ class Prefs(BaseModel):
     servings: int | None = Field(default=None, ge=1, le=20)
 
 
+# core-api maps the user's Accept-Language to one of these; anything else is a bug there.
+Language = Literal["en", "ru"]
+
+
 class AdaptRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     recipes: list[RetrievedRecipe] = Field(min_length=1, max_length=5)
     inventory: list[str] = Field(min_length=1)
     prefs: Prefs = Field(default_factory=Prefs)
+    # Language of the public text (title, steps, substitution notes). Ingredient names
+    # stay English whatever it is. Defaults to English for a core-api that does not send it.
+    language: Language = "en"
 
 
 class ParseIngredientsRequest(BaseModel):

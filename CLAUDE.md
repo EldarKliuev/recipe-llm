@@ -110,7 +110,7 @@ git fetch origin main -q && git diff --name-only origin/main...HEAD
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| POST | `/v1/adapt` | Единственный контракт пути готовки: `recipes[]`, `inventory[]`, `prefs` → `AdaptedRecipe` + `RunMeta` |
+| POST | `/v1/adapt` | Единственный контракт пути готовки: `recipes[]`, `inventory[]`, `prefs`, `language` (`en`/`ru`, по умолчанию `en`) → `AdaptedRecipe` + `RunMeta` |
 | POST | `/v1/parse-ingredients` | Длинный хвост ingest из `tools/ingest` в `core-api`, не пользовательский сценарий |
 | GET | `/health` | Liveness |
 | GET | `/ready` | Провайдер показывает `LLM_MODEL` в списке моделей |
@@ -188,7 +188,7 @@ uv run python -m tools.eval --limit 3
 - Адаптировать существующий рецепт, ничего не выдумывать и всегда указывать `base_recipe_id`.
 - Шаги в ответе — публичный текст и должны быть **пересказаны**, а не скопированы из `directions` датасета.
 - Продукты не из присланного инвентаря попадают в `missing_ingredients`.
-- Только английский язык.
+- `title`, `steps` и `note` у замен пишутся на языке из `language` (`en` или `ru`). Имена продуктов в `used_ingredients`, `missing_ingredients` и `substitutions` остаются английскими каноническими: по ним `core-api` сверяет каталог и аллергены. Кириллица в имени уходит в repair. Парсинг ингредиентов — только английский.
 
 ### 5.5 Промпт и модель меняются только с eval
 
