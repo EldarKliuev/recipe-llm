@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from time import perf_counter
 
 import pytest
@@ -292,3 +293,34 @@ def test_malformed_request_is_400_not_422(make_client):
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_unexpected_error_keeps_the_error_format_request_id_and_log_line(make_client, caplog):
+    # A bug, not a model or provider failure: nothing in the service maps it to a status.
+    provider = FakeProvider([RuntimeError("bug in our code")])
+
+    with caplog.at_level(logging.INFO):
+        response = make_client(provider).post(
+            "/v1/adapt", json=ADAPT_PAYLOAD, headers={"X-Request-ID": "core-api-42"}
+        )
+
+    assert response.status_code == 500
+    assert response.headers["X-Request-ID"] == "core-api-42"
+    body = response.json()
+    assert body["error"]["code"] == "internal_error"
+    assert body["request_id"] == "core-api-42"
+    # The exception text stays in our log; core-api gets only the code.
+    assert "bug in our code" not in response.text
+
+    crash = next(r for r in caplog.records if r.getMessage() == "unhandled error")
+    assert crash.exc_info and isinstance(crash.exc_info[1], RuntimeError)
+    handled = next(r for r in caplog.records if r.getMessage() == "request handled")
+    assert handled.status == 500
+    assert handled.request_id == "core-api-42"
+
+
+def test_unexpected_error_frees_the_slot_for_the_next_request(make_client, gate):
+    client = make_client(FakeProvider([RuntimeError("bug in our code"), ADAPTED]))
+
+    assert client.post("/v1/adapt", json=ADAPT_PAYLOAD).status_code == 500
+    assert client.post("/v1/adapt", json=ADAPT_PAYLOAD).status_code == 200

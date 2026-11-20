@@ -75,6 +75,14 @@ def create_app() -> FastAPI:
         started = perf_counter()
         try:
             response = await call_next(request)
+        except Exception:
+            # Handled here rather than by an Exception handler: Starlette runs that one
+            # outside this middleware, so the 500 would lose X-Request-ID and this log line.
+            log.exception("unhandled error")
+            response = JSONResponse(
+                status_code=500,
+                content=_error_body(request, "internal_error", "unexpected server error", None),
+            )
         finally:
             request_id_var.reset(token)
         duration_ms = int((perf_counter() - started) * 1000)

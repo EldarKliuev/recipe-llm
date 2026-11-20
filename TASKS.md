@@ -154,6 +154,7 @@
 
 ### TASK-12. Единый формат для непредвиденных ошибок
 
+- **Статус:** сделано 2026-11-20 (ветка `task-12-internal-error`). Непредвиденное исключение ловит middleware `request_context`, а не обработчик `Exception`: тот Starlette запускает снаружи middleware, и ответ остался бы без `X-Request-ID` и строки `request handled`. Ответ — 500 с `{"error": {"code": "internal_error"}, "request_id": ...}`, текст исключения только в логе `unhandled error` с трассировкой. Провайдер переводит любой `openai.APIError`, включая `APIResponseValidationError`, в `ProviderUnavailableError`. Повтор 500 в `worker.go` не менялся: `core-api` по-прежнему ретраит 500 и снова занимает GPU.
 - **Проблема:** необработанное исключение даёт голый `Internal Server Error` без `{"error": ...}` и без `X-Request-ID`, и строки `request handled` в логе не будет. Такую ошибку трудно связать с запросом. `core-api` не считает 500 занятостью и повторяет вызов (`worker.go`, ветка после `switch`), снова занимая GPU. Сюда же относится не переведённый `APIResponseValidationError`, хотя при настройках клиента по умолчанию он маловероятен.
 - **Подтверждено:** проба: 500 и текст `Internal Server Error`, заголовка нет.
 - **Сделать:** обработчик `Exception` с тем же форматом и кодом `internal_error`; логировать с трассировкой.
