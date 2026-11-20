@@ -19,8 +19,14 @@ from tests.conftest import ADAPTED
 SCHEMA = {"name": "x", "schema": {}}
 
 
-def completion(message: dict, *, choices: bool = True) -> httpx.Response:
-    choice = {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", **message}}
+def completion(
+    message: dict, *, choices: bool = True, finish_reason: str = "stop"
+) -> httpx.Response:
+    choice = {
+        "index": 0,
+        "finish_reason": finish_reason,
+        "message": {"role": "assistant", **message},
+    }
     return httpx.Response(
         200,
         json={
@@ -182,6 +188,21 @@ async def test_no_choices_is_malformed_with_usage_kept():
     with pytest.raises(MalformedModelJSON) as exc_info:
         await provider.complete_json("s", "u", SCHEMA, 5)
 
+    assert exc_info.value.meta.completion_tokens == 7
+
+
+@pytest.mark.parametrize("content", ['{"title": "Sh', '{"title": "Short"}'])
+async def test_answer_cut_at_the_token_limit_is_truncated_even_if_it_parses(content):
+    provider, _ = wire_provider(
+        LMStudioProvider,
+        respond=lambda _: completion({"content": content}, finish_reason="length"),
+    )
+
+    with pytest.raises(base.TruncatedModelOutput) as exc_info:
+        await provider.complete_json("s", "u", SCHEMA, 5)
+
+    assert "max_tokens=16" in exc_info.value.message
+    assert exc_info.value.raw == content
     assert exc_info.value.meta.completion_tokens == 7
 
 

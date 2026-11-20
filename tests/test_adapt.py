@@ -8,6 +8,7 @@ import pytest
 from app.domain.prompts import PROMPT_VERSION
 from app.domain.schemas import AdaptedRecipe
 from app.errors import ProviderTimeoutError, ProviderUnavailableError
+from app.providers.base import LLMMeta, TruncatedModelOutput
 from app.usecases.runner import run_structured
 from tests.conftest import ADAPT_PAYLOAD, ADAPTED, FakeProvider
 
@@ -217,6 +218,39 @@ def test_persistently_invalid_output_gives_422_for_core_api_to_degrade(make_clie
         "prompt_tokens": 300,
         "completion_tokens": 150,
     }
+
+
+def truncated() -> TruncatedModelOutput:
+    meta = LLMMeta(provider="fake", model="fake-model", latency_ms=7, completion_tokens=1536)
+    return TruncatedModelOutput("output cut off at max_tokens=1536", raw='{"title": "Sh', meta=meta)
+
+
+def test_truncated_output_is_422_at_once_without_a_repair(make_client):
+    # The repair would run with the same token limit and be cut off again.
+    provider = FakeProvider([truncated(), ADAPTED])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 422
+    assert len(provider.calls) == 1
+    error = response.json()["error"]
+    assert error["code"] == "invalid_model_output"
+    assert "token limit" in error["message"]
+    assert error["detail"]["reason"] == "output cut off at max_tokens=1536"
+    assert error["detail"]["raw_excerpt"] == '{"title": "Sh'
+    assert error["detail"]["meta"]["retries"] == 0
+    assert error["detail"]["meta"]["completion_tokens"] == 1536
+
+
+def test_repair_cut_at_the_token_limit_stops_the_loop(make_client):
+    provider = FakeProvider(["{", truncated(), ADAPTED])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 422
+    assert len(provider.calls) == 2
+    detail = response.json()["error"]["detail"]
+    assert detail["reason"] == "output cut off at max_tokens=1536"
+    assert detail["meta"]["retries"] == 1
+    assert detail["meta"]["completion_tokens"] == 50 + 1536
 
 
 def test_model_that_keeps_inventing_ids_eventually_fails(make_client):

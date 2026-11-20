@@ -47,6 +47,14 @@ class MalformedModelJSON(Exception):
         self.meta = meta
 
 
+class TruncatedModelOutput(MalformedModelJSON):
+    """The answer stopped at max_tokens (finish_reason="length").
+
+    Not worth a repair: the retry runs with the same limit and a longer prompt, so it is cut
+    off again and holds the only GPU slot for nothing.
+    """
+
+
 @runtime_checkable
 class LLMProvider(Protocol):
     name: str
@@ -134,7 +142,13 @@ class OpenAICompatibleProvider:
 
         if not completion.choices:
             raise MalformedModelJSON("model returned no choices", raw="", meta=meta)
-        content = completion.choices[0].message.content or ""
+        choice = completion.choices[0]
+        content = choice.message.content or ""
+        # Checked before parsing: the cut may fall right after a closing brace.
+        if choice.finish_reason == "length":
+            raise TruncatedModelOutput(
+                f"output cut off at max_tokens={self._max_tokens}", raw=content, meta=meta
+            )
         try:
             data = json.loads(extract_json_object(content))
         except json.JSONDecodeError as exc:

@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from app.domain.prompts import PROMPT_VERSION, build_repair_user
 from app.domain.schemas import RunMeta, strict_json_schema
 from app.errors import ModelOutputInvalidError, ProviderTimeoutError
-from app.providers.base import LLMMeta, LLMProvider, MalformedModelJSON
+from app.providers.base import LLMMeta, LLMProvider, MalformedModelJSON, TruncatedModelOutput
 from app.usecases.gate import GpuGate, Slot
 
 log = logging.getLogger(__name__)
@@ -42,7 +42,8 @@ async def run_structured[T: BaseModel](
     a 504. The 422 `detail.meta` carries the same `RunMeta` as a success, because core-api records
     failed runs in generation_runs too; a 504 has none, as no answer named the model.
     `asyncio.timeout` enforces the limit because the HTTP client's timeout only bounds
-    each read, not the whole request.
+    each read, not the whole request. An answer cut off at max_tokens is a 422 at once: a repair
+    with the same limit would be cut off too.
     """
     deadline = asyncio.get_running_loop().time() + budget_s
     async with gate.slot() as slot:
@@ -112,6 +113,19 @@ async def _attempt_loop[T: BaseModel](
                 extra={"attempt": attempt, "timeout_s": attempt_timeout},
             )
             break
+        except TruncatedModelOutput as exc:
+            total_latency_ms, prompt_tokens, completion_tokens = _accumulate(
+                exc.meta, total_latency_ms, prompt_tokens, completion_tokens
+            )
+            model = exc.meta.model
+            log.warning(
+                "model output truncated",
+                extra={"attempt": attempt, "completion_tokens": exc.meta.completion_tokens},
+            )
+            raise ModelOutputInvalidError(
+                "model output was cut off at the token limit",
+                detail=_invalid_detail(exc.message, exc.raw, run_meta()),
+            ) from exc
         except MalformedModelJSON as exc:
             total_latency_ms, prompt_tokens, completion_tokens = _accumulate(
                 exc.meta, total_latency_ms, prompt_tokens, completion_tokens
@@ -159,12 +173,12 @@ async def _attempt_loop[T: BaseModel](
         raise ProviderTimeoutError("model did not answer in time")
     raise ModelOutputInvalidError(
         "model output still invalid: repair attempts or the run budget exhausted",
-        detail={
-            "reason": last_error,
-            "raw_excerpt": last_raw[:500],
-            "meta": run_meta().model_dump(),
-        },
+        detail=_invalid_detail(last_error, last_raw, run_meta()),
     )
+
+
+def _invalid_detail(reason: str, raw: str, meta: RunMeta) -> dict[str, Any]:
+    return {"reason": reason, "raw_excerpt": raw[:500], "meta": meta.model_dump()}
 
 
 def _accumulate(
