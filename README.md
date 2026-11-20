@@ -167,7 +167,7 @@ CI (`.github/workflows/ci.yml`) запускает `make lint` и `make test` н
 
 ## Eval
 
-Прогон 30 фиксированных кейсов из [`tools/eval/fixtures/cases.json`](tools/eval/fixtures/cases.json) через настроенную модель. Результат — CSV в `tools/eval/results/` (в git не попадает) с метриками: валидный JSON с первой попытки, нарушения аллергенов, ингредиенты вне инвентаря, не указанные в `missing`, доля отказов, медиана и p95 задержки. Postgres не нужен.
+Прогон 30 фиксированных кейсов из [`tools/eval/fixtures/cases.json`](tools/eval/fixtures/cases.json) через настроенную модель. Результат — CSV в `tools/eval/results/` (в git не попадает) и рядом `*_outputs.jsonl` с ответом модели по каждому кейсу (у отказа — `reason` и `raw_excerpt`). Метрики в CSV: валидный JSON с первой попытки, нарушения аллергенов, ингредиенты вне инвентаря, не указанные в `missing`, доля отказов, медиана и p95 задержки. Postgres не нужен.
 
 ```bash
 make eval-local

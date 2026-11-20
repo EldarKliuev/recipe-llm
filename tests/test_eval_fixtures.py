@@ -107,6 +107,21 @@ async def test_eval_run_writes_comparable_csvs_and_counts_refusals(eval_env):
     assert broken["status"] == "invalid_model_output"
     assert broken["valid_first_attempt"] == "0"
 
+    # The answers themselves, so a flagged case can be read after the run.
+    [outputs_path] = results_dir.glob("*_outputs.jsonl")
+    assert outputs_path.name.split("_")[0] == cases_path.name.split("_")[0]
+    good_out, broken_out = (json.loads(line) for line in outputs_path.read_text().splitlines())
+    assert good_out["case_id"] == "good"
+    assert good_out["status"] == "ok"
+    assert good_out["recipe"]["steps"][0] == "Boil pasta."
+    assert good_out["meta"]["model"] == "fake-model"
+    assert broken_out["case_id"] == "broken"
+    assert broken_out["status"] == "invalid_model_output"
+    assert broken_out["recipe"] is None
+    assert broken_out["error"]["detail"]["raw_excerpt"] == "not json"
+    assert "not json" in broken_out["error"]["detail"]["reason"]
+    assert broken_out["error"]["detail"]["meta"]["retries"] == 2
+
     [summary] = _read_csv(results_dir / "summary.csv")
     assert summary["model"] == "fake-model"
     assert summary["prompt_version"] == PROMPT_VERSION

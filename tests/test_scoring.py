@@ -45,6 +45,24 @@ def test_allergen_violation_catches_substitution_suggestions():
     assert hits == ["cashew"]
 
 
+def test_gluten_free_staples_do_not_count_as_wheat():
+    hits = count_allergen_violations(
+        recipe(
+            used_ingredients=["rice noodles", "shrimp"],
+            steps=["Soak the rice noodles.", "Dust with rice flour and gluten-free bread crumbs."],
+        ),
+        ["wheat"],
+    )
+    assert hits == []
+
+
+def test_plain_noodles_next_to_rice_noodles_still_count_as_wheat():
+    hits = count_allergen_violations(
+        recipe(used_ingredients=["rice noodles"], steps=["Add the egg noodles."]), ["wheat"]
+    )
+    assert hits == ["noodle"]
+
+
 def test_no_allergies_means_no_violations():
     assert count_allergen_violations(recipe(used_ingredients=["butter"]), []) == []
 
