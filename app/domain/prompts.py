@@ -1,9 +1,14 @@
 import json
 
-from app.domain.schemas import AdaptRequest, ParseIngredientsRequest, RetrievedRecipe
+from app.domain.schemas import (
+    AdaptRequest,
+    Language,
+    ParseIngredientsRequest,
+    RetrievedRecipe,
+)
 
 # Bump on every prompt change: the version travels in RunMeta so eval runs stay comparable.
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 
 ADAPT_SYSTEM = """You adapt an existing recipe to what a cook already has at home.
 
@@ -27,8 +32,14 @@ and do not suggest them as substitutions.
 6. `step_minutes` has exactly one entry per step, in the same order as `steps`. Give the \
 whole number of minutes only where timing matters (simmering, baking, resting, marinating); \
 use null for every other step.
-7. Write in English. Do not add commentary outside the JSON object.
+7. Write `title`, `steps` and every substitution `note` in the language named in \
+`language`. Ingredient names in `used_ingredients`, `missing_ingredients`, `missing` and \
+`replace_with` stay in English, spelled as in the inventory and candidate recipes, whatever \
+the language.
+8. Do not add commentary outside the JSON object.
 """
+
+LANGUAGE_NAMES: dict[Language, str] = {"en": "English", "ru": "Russian"}
 
 PARSE_SYSTEM = """You normalise free-form recipe ingredient lines into structured records.
 
@@ -58,6 +69,7 @@ def _render_recipe(recipe: RetrievedRecipe) -> dict[str, object]:
 def build_adapt_user(request: AdaptRequest) -> str:
     prefs = request.prefs
     payload = {
+        "language": LANGUAGE_NAMES[request.language],
         "inventory": request.inventory,
         "allergies": prefs.allergies,
         "dislikes": prefs.dislikes,
@@ -69,7 +81,17 @@ def build_adapt_user(request: AdaptRequest) -> str:
     return (
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
         f"Choose one recipe from candidate_recipes (allowed base_recipe_id values: "
-        f"{allowed_ids}) and adapt it to the inventory above."
+        f"{allowed_ids}) and adapt it to the inventory above. "
+        f"{language_reminder(request.language)}"
+    )
+
+
+def language_reminder(language: Language) -> str:
+    """Repeated at the end of the user turn and in repair messages: a small model reading
+    a long English payload drifts back to English, or translates the ingredient names."""
+    return (
+        f"Write title, steps and notes in {LANGUAGE_NAMES[language]}; keep every "
+        f"ingredient name in English, exactly as listed above."
     )
 
 

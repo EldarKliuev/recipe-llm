@@ -43,3 +43,18 @@ def test_repair_prompt_keeps_the_task_and_adds_the_error():
     assert "original task" in repair
     assert "base_recipe_id: field required" in repair
     assert '{"broken":' in repair
+
+
+def test_adapt_prompt_names_the_answer_language():
+    english = build_adapt_user(AdaptRequest.model_validate(ADAPT_PAYLOAD))
+    russian = build_adapt_user(AdaptRequest.model_validate(ADAPT_PAYLOAD | {"language": "ru"}))
+
+    assert '"language": "English"' in english
+    assert '"language": "Russian"' in russian
+
+
+def test_adapt_system_prompt_keeps_ingredient_names_english_in_any_language():
+    # core-api checks names against an English catalog and allergen rules.
+    assert "`language`" in ADAPT_SYSTEM
+    assert "stay in English" in ADAPT_SYSTEM
+    assert "Write in English" not in ADAPT_SYSTEM

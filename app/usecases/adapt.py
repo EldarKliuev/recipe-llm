@@ -1,12 +1,15 @@
 import logging
+import re
 
-from app.domain.prompts import ADAPT_SYSTEM, build_adapt_user
+from app.domain.prompts import ADAPT_SYSTEM, build_adapt_user, language_reminder
 from app.domain.schemas import AdaptedRecipe, AdaptRequest, AdaptResponse
 from app.providers.base import LLMProvider
 from app.usecases.gate import GpuGate
 from app.usecases.runner import run_structured
 
 log = logging.getLogger(__name__)
+
+_CYRILLIC = re.compile("[\u0400-\u04ff]")
 
 
 async def adapt_recipe(
@@ -36,6 +39,21 @@ async def adapt_recipe(
                 f"step_minutes must have one entry per step: got {len(recipe.step_minutes)} "
                 f"for {len(recipe.steps)} steps"
             )
+        # core-api matches names against an English catalog and allergen rules, so a
+        # translated name would be rejected there as an off-catalog product.
+        names = [
+            *recipe.used_ingredients,
+            *recipe.missing_ingredients,
+            *(name for sub in recipe.substitutions for name in (sub.missing, sub.replace_with)),
+        ]
+        translated = [name for name in names if _CYRILLIC.search(name)]
+        if translated:
+            # Without the reminder the repaired answer comes back entirely in English.
+            return (
+                f"ingredient names must stay in English as given in the inventory and "
+                f"recipes, whatever the language: {translated}. "
+                f"{language_reminder(request.language)}"
+            )
         return None
 
     recipe, meta = await run_structured(
@@ -54,6 +72,7 @@ async def adapt_recipe(
         extra={
             "base_recipe_id": recipe.base_recipe_id,
             "candidates": len(request.recipes),
+            "language": request.language,
             "inventory_size": len(request.inventory),
             "missing_count": len(recipe.missing_ingredients),
             "retries": meta.retries,
