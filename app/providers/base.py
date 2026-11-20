@@ -6,6 +6,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from openai import (
     APIConnectionError,
+    APIError,
     APIStatusError,
     APITimeoutError,
     AsyncOpenAI,
@@ -117,6 +118,9 @@ class OpenAICompatibleProvider:
             raise ProviderUnavailableError(
                 f"model returned HTTP {exc.status_code}", detail=str(exc)
             ) from exc
+        except APIError as exc:
+            # Off by default, but a body the SDK cannot read must not escape as a bare 500.
+            raise ProviderUnavailableError("model response is unreadable", detail=str(exc)) from exc
 
         latency_ms = int((perf_counter() - started) * 1000)
         usage = completion.usage
@@ -146,7 +150,7 @@ class OpenAICompatibleProvider:
             page = await self._client.models.list(timeout=LIST_MODELS_TIMEOUT_SEC)
         except APITimeoutError as exc:
             raise ProviderTimeoutError("provider model list timed out", detail=str(exc)) from exc
-        except (APIConnectionError, APIStatusError) as exc:
+        except APIError as exc:
             raise ProviderUnavailableError("cannot list provider models", detail=str(exc)) from exc
         return [model.id for model in page.data]
 

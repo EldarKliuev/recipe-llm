@@ -235,3 +235,17 @@ async def test_create_provider_picks_the_backend_from_settings(name, provider_cl
         assert str(provider._client.base_url) == "http://llm.test/v1/"
     finally:
         await provider.aclose()
+
+
+async def test_response_the_sdk_cannot_read_is_unavailable_not_a_crash():
+    """openai exceptions stay inside providers/, or the route would answer a bare 500."""
+    provider, _ = wire_provider(
+        LMStudioProvider, respond=lambda _: httpx.Response(200, json={"unexpected": True})
+    )
+    # Off by default in the SDK; on, a malformed body raises APIResponseValidationError.
+    provider._client._strict_response_validation = True
+
+    with pytest.raises(ProviderUnavailableError) as exc_info:
+        await provider.complete_json("s", "u", SCHEMA, 5)
+
+    assert exc_info.value.status_code == 503
