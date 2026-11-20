@@ -3,7 +3,7 @@ import json
 from app.domain.schemas import AdaptRequest, ParseIngredientsRequest, RetrievedRecipe
 
 # Bump on every prompt change: the version travels in RunMeta so eval runs stay comparable.
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 
 ADAPT_SYSTEM = """You adapt an existing recipe to what a cook already has at home.
 
@@ -24,7 +24,10 @@ the inventory without listing it in `missing_ingredients`.
 `substitutions` with a one-sentence `note` on why it works.
 5. Treat the listed allergies and dislikes as hard avoidance: do not use those ingredients \
 and do not suggest them as substitutions.
-6. Write in English. Do not add commentary outside the JSON object.
+6. `step_minutes` has exactly one entry per step, in the same order as `steps`. Give the \
+whole number of minutes only where timing matters (simmering, baking, resting, marinating); \
+use null for every other step.
+7. Write in English. Do not add commentary outside the JSON object.
 """
 
 PARSE_SYSTEM = """You normalise free-form recipe ingredient lines into structured records.

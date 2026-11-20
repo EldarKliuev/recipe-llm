@@ -101,6 +101,36 @@ def test_one_blank_step_among_real_ones_is_not_worth_a_repair(make_client):
     assert len(provider.calls) == 1
 
 
+def test_step_minutes_are_returned_alongside_steps(make_client):
+    response = make_client(FakeProvider([ADAPTED])).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["recipe"]["step_minutes"] == [10, None, None]
+
+
+@pytest.mark.parametrize("minutes", [[10], [10, None, None, 5]], ids=["short", "long"])
+def test_step_minutes_of_the_wrong_length_are_repaired(make_client, minutes):
+    # core-api pairs minutes with steps by index, so a shifted list would put a timer
+    # on the wrong step.
+    provider = FakeProvider([{**ADAPTED, "step_minutes": minutes}, ADAPTED])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 200
+    assert response.json()["recipe"]["step_minutes"] == ADAPTED["step_minutes"]
+    assert response.json()["meta"]["retries"] == 1
+    assert "step_minutes must have one entry per step" in provider.calls[1]["user"]
+
+
+def test_step_minutes_that_never_match_the_steps_give_422(make_client):
+    bad = {**ADAPTED, "step_minutes": [10]}
+    provider = FakeProvider([bad, bad, bad])
+    response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)
+
+    assert response.status_code == 422
+    assert len(provider.calls) == 3
+    assert "step_minutes" in response.json()["error"]["detail"]["reason"]
+
+
 def test_persistently_invalid_output_gives_422_for_core_api_to_degrade(make_client):
     provider = FakeProvider(["{", "{", "{"])
     response = make_client(provider).post("/v1/adapt", json=ADAPT_PAYLOAD)

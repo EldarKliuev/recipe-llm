@@ -11,6 +11,7 @@ def recipe(**overrides) -> AdaptedRecipe:
         "base_recipe_id": 1,
         "title": "Test",
         "steps": ["Cook it."],
+        "step_minutes": [None],
         "used_ingredients": ["spaghetti", "garlic"],
         "missing_ingredients": [],
         "substitutions": [],

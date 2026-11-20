@@ -23,6 +23,12 @@ def test_adapt_system_prompt_forbids_invention_and_verbatim_steps():
     assert "missing_ingredients" in ADAPT_SYSTEM
 
 
+def test_adapt_system_prompt_asks_for_minutes_only_where_timing_matters():
+    assert "step_minutes" in ADAPT_SYSTEM
+    assert "null" in ADAPT_SYSTEM
+    assert "same order" in ADAPT_SYSTEM
+
+
 def test_parse_prompt_states_the_expected_item_count():
     prompt = build_parse_user(ParseIngredientsRequest(lines=["2 cups flour", "1 tsp salt"]))
 

@@ -55,11 +55,16 @@ class Substitution(BaseModel):
 
 class AdaptedRecipe(BaseModel):
     """Structured model output. `base_recipe_id` lets core-api prove the model picked
-    one of the supplied recipes instead of inventing its own."""
+    one of the supplied recipes instead of inventing its own.
+
+    `step_minutes` runs parallel to `steps` (same length, null where timing does not
+    matter) rather than turning steps into objects: core-api and the web client read
+    `steps` as plain strings."""
 
     base_recipe_id: int
     title: str
     steps: list[str]
+    step_minutes: list[int | None]
     used_ingredients: list[str]
     missing_ingredients: list[str]
     substitutions: list[Substitution]

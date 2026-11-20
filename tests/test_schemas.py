@@ -20,6 +20,7 @@ def test_strict_schema_closes_objects_and_requires_every_field():
         "base_recipe_id",
         "title",
         "steps",
+        "step_minutes",
         "used_ingredients",
         "missing_ingredients",
         "substitutions",
@@ -27,6 +28,27 @@ def test_strict_schema_closes_objects_and_requires_every_field():
     substitution = schema["$defs"]["Substitution"]
     assert substitution["additionalProperties"] is False
     assert set(substitution["required"]) == {"missing", "replace_with", "note"}
+
+
+def test_step_minutes_allow_null_but_must_be_sent():
+    # Strict mode cannot express "optional"; a step without a timer is null, not absent.
+    schema = strict_json_schema(AdaptedRecipe, "adapted_recipe")["schema"]
+    items = schema["properties"]["step_minutes"]["items"]
+    assert {"type": "integer"} in items["anyOf"]
+    assert {"type": "null"} in items["anyOf"]
+
+    base = {
+        "base_recipe_id": 1,
+        "title": "x",
+        "steps": ["a", "b"],
+        "used_ingredients": [],
+        "missing_ingredients": [],
+        "substitutions": [],
+    }
+    recipe = AdaptedRecipe.model_validate(base | {"step_minutes": [5, None]})
+    assert recipe.step_minutes == [5, None]
+    with pytest.raises(ValidationError):
+        AdaptedRecipe.model_validate(base)
 
 
 def test_strict_schema_drops_defaults_that_strict_mode_rejects():
