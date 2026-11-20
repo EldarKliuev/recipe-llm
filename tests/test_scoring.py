@@ -1,6 +1,7 @@
-from app.domain.schemas import AdaptedRecipe
+from app.domain.schemas import AdaptedRecipe, RetrievedRecipe
 from tools.eval.scoring import (
     count_allergen_violations,
+    count_copied_steps,
     count_out_of_inventory,
     same_food,
 )
@@ -61,3 +62,28 @@ def test_declared_missing_ingredients_are_not_counted():
         ["spaghetti"],
     )
     assert result == []
+
+
+def source(steps: list[str], recipe_id: int = 1) -> RetrievedRecipe:
+    return RetrievedRecipe(id=recipe_id, title="Source", steps=steps)
+
+
+def test_copied_steps_match_after_case_punctuation_and_spacing():
+    result = count_copied_steps(
+        recipe(steps=["boil  the PASTA", "Warm garlic gently in the oil.", "Serve."]),
+        [source(["Boil the pasta!", "Fry garlic."]), source(["Serve."], recipe_id=2)],
+    )
+    assert result == ["boil  the PASTA", "Serve."]
+
+
+def test_rewritten_steps_are_not_counted_as_copies():
+    result = count_copied_steps(
+        recipe(steps=["Cook the pasta until tender.", "Fry the garlic in oil."]),
+        [source(["Boil the pasta.", "Fry garlic."])],
+    )
+    assert result == []
+
+
+def test_punctuation_only_steps_never_count_as_copies():
+    # Both sides normalise to an empty string; that is not copied dataset text.
+    assert count_copied_steps(recipe(steps=["..."]), [source(["-"])]) == []

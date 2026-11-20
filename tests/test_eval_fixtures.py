@@ -41,6 +41,7 @@ def test_summary_reports_rates_over_all_cases_including_refusals():
             latency_ms=300,
             allergen_violations=["butter"],
             out_of_inventory=["parsley"],
+            copied_steps=["Boil pasta.", "Toss."],
         ),
         CaseResult(case_id="c", status="invalid_model_output", error="gave up"),
     ]
@@ -53,6 +54,8 @@ def test_summary_reports_rates_over_all_cases_including_refusals():
     assert summary["first_attempt_json_rate"] == round(1 / 3, 4)
     assert summary["allergen_violations"] == 1
     assert summary["out_of_inventory_total"] == 1
+    assert summary["copied_steps_total"] == 2
+    assert summary["cases_with_copied_steps"] == 1
     assert summary["latency_ms_median"] == 200
 
 
@@ -80,8 +83,10 @@ async def test_eval_run_writes_comparable_csvs_and_counts_refusals(eval_env):
     fixtures.write_text(
         json.dumps([{"id": "good", **ADAPT_PAYLOAD}, {"id": "broken", **ADAPT_PAYLOAD}])
     )
-    # First case answers at once; second never produces JSON, so repair is exhausted.
-    provider = FakeProvider([ADAPTED, "not json", "not json", "not json"])
+    # First case answers at once with one step copied from the source recipe;
+    # the second never produces JSON, so repair is exhausted.
+    copying = ADAPTED | {"steps": ["Boil pasta.", *ADAPTED["steps"][1:]]}
+    provider = FakeProvider([copying, "not json", "not json", "not json"])
     use_provider(provider)
 
     assert await eval_main.main(["--fixtures", str(fixtures)]) == 0
@@ -98,6 +103,7 @@ async def test_eval_run_writes_comparable_csvs_and_counts_refusals(eval_env):
     assert good["status"] == "ok"
     assert good["base_recipe_id"] == "1001"
     assert good["valid_first_attempt"] == "1"
+    assert good["copied_steps"] == "Boil pasta."
     assert broken["status"] == "invalid_model_output"
     assert broken["valid_first_attempt"] == "0"
 
@@ -108,6 +114,7 @@ async def test_eval_run_writes_comparable_csvs_and_counts_refusals(eval_env):
     assert summary["refusals"] == "1"
     assert summary["refusal_rate"] == "0.5"
     assert summary["first_attempt_json_rate"] == "0.5"
+    assert summary["copied_steps_total"] == "1"
 
 
 async def test_eval_refuses_an_empty_case_set_without_touching_the_model(
@@ -127,3 +134,23 @@ async def test_eval_refuses_an_empty_case_set_without_touching_the_model(
     assert "no cases" in capsys.readouterr().err
 
     assert not results_dir.exists()
+
+
+async def test_new_summary_columns_rewrite_an_older_header_instead_of_shifting(eval_env):
+    tmp_path, results_dir, use_provider = eval_env
+    results_dir.mkdir()
+    # A summary.csv written before a metric existed: same leading columns, fewer of them.
+    (results_dir / "summary.csv").write_text("ts,model,cases\n2026-11-06,old-model,30\n")
+    fixtures = tmp_path / "cases.json"
+    fixtures.write_text(json.dumps([{"id": "good", **ADAPT_PAYLOAD}]))
+    use_provider(FakeProvider([ADAPTED]))
+
+    assert await eval_main.main(["--fixtures", str(fixtures)]) == 0
+
+    old, new = _read_csv(results_dir / "summary.csv")
+    assert old["model"] == "old-model"
+    assert old["cases"] == "30"
+    assert old["copied_steps_total"] == ""
+    assert new["model"] == "fake-model"
+    assert new["copied_steps_total"] == "0"
+    assert None not in new

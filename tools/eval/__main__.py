@@ -23,7 +23,11 @@ from app.metrics import Metrics, percentile
 from app.providers import create_provider
 from app.usecases.adapt import adapt_recipe
 from app.usecases.gate import GpuGate
-from tools.eval.scoring import count_allergen_violations, count_out_of_inventory
+from tools.eval.scoring import (
+    count_allergen_violations,
+    count_copied_steps,
+    count_out_of_inventory,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cases.json"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -39,6 +43,7 @@ class CaseResult:
     valid_first_attempt: int = 0
     allergen_violations: list[str] = field(default_factory=list)
     out_of_inventory: list[str] = field(default_factory=list)
+    copied_steps: list[str] = field(default_factory=list)
     missing_count: int | None = None
     steps_count: int | None = None
     error: str = ""
@@ -63,6 +68,7 @@ async def run_case(case: dict, *, provider, gate, timeout_s: float, budget_s: fl
         valid_first_attempt=int(meta.retries == 0),
         allergen_violations=count_allergen_violations(recipe, request.prefs.allergies),
         out_of_inventory=count_out_of_inventory(recipe, request.inventory),
+        copied_steps=count_copied_steps(recipe, request.recipes),
         missing_count=len(recipe.missing_ingredients),
         steps_count=len(recipe.steps),
     )
@@ -87,6 +93,8 @@ def summarise(results: list[CaseResult], *, provider_name: str, model: str) -> d
         "cases_with_allergen_violation": sum(1 for result in results if result.allergen_violations),
         "out_of_inventory_total": sum(len(result.out_of_inventory) for result in results),
         "cases_with_out_of_inventory": sum(1 for result in results if result.out_of_inventory),
+        "copied_steps_total": sum(len(result.copied_steps) for result in results),
+        "cases_with_copied_steps": sum(1 for result in results if result.copied_steps),
         "latency_ms_median": int(percentile(latencies, 0.5)) if latencies else "",
         "latency_ms_p95": int(percentile(latencies, 0.95)) if latencies else "",
     }
@@ -108,16 +116,33 @@ def write_csv(results: list[CaseResult], summary: dict[str, object], stamp: str)
             row = asdict(result)
             row["allergen_violations"] = "|".join(result.allergen_violations)
             row["out_of_inventory"] = "|".join(result.out_of_inventory)
+            row["copied_steps"] = "|".join(result.copied_steps)
             writer.writerow([summary["model"], summary["prompt_version"], *row.values()])
 
-    summary_path = RESULTS_DIR / "summary.csv"
-    is_new = not summary_path.exists()
-    with summary_path.open("a", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(summary))
-        if is_new:
-            writer.writeheader()
-        writer.writerow(summary)
+    _append_summary(RESULTS_DIR / "summary.csv", summary)
     return cases_path
+
+
+def _append_summary(path: Path, summary: dict[str, object]) -> None:
+    """Appends one run. If the header predates a metric, the file is rewritten with the
+    new columns (empty for older runs): appending a longer row would shift its values
+    out from under their column names and make runs incomparable."""
+    rows: list[dict[str, str]] = []
+    fieldnames = list(summary)
+    if path.exists():
+        with path.open(newline="") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+            old_fields = reader.fieldnames or []
+        fieldnames = [*old_fields, *(name for name in summary if name not in old_fields)]
+        if fieldnames == old_fields:
+            with path.open("a", newline="") as handle:
+                csv.DictWriter(handle, fieldnames=fieldnames).writerow(summary)
+            return
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows([*rows, summary])
 
 
 async def main(argv: list[str] | None = None) -> int:
@@ -164,7 +189,8 @@ async def main(argv: list[str] | None = None) -> int:
                 f"[{index}/{len(cases)}] {result.case_id}: {result.status} "
                 f"retries={result.retries} latency_ms={result.latency_ms} "
                 f"allergens={len(result.allergen_violations)} "
-                f"out_of_inventory={len(result.out_of_inventory)}",
+                f"out_of_inventory={len(result.out_of_inventory)} "
+                f"copied_steps={len(result.copied_steps)}",
                 flush=True,
             )
     finally:
