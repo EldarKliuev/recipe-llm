@@ -7,7 +7,7 @@ core-api against canonical ingredient ids.
 
 import re
 
-from app.domain.schemas import AdaptedRecipe
+from app.domain.schemas import AdaptedRecipe, RetrievedRecipe
 
 # Words that carry no food identity on their own and would create false matches.
 GENERIC_WORDS = frozenset(
@@ -155,3 +155,18 @@ def count_out_of_inventory(recipe: AdaptedRecipe, inventory: list[str]) -> list[
         if not in_list(ingredient, inventory)
         and not in_list(ingredient, recipe.missing_ingredients)
     )
+
+
+def count_copied_steps(recipe: AdaptedRecipe, sources: list[RetrievedRecipe]) -> list[str]:
+    """Output steps that repeat a supplied step verbatim, ignoring case, punctuation and spacing.
+
+    Steps are public text and must be retold, not copied from the dataset. Every supplied
+    recipe counts as a source, whichever one the model based its answer on. A light
+    paraphrase slips through: this counts exact copies only.
+    """
+    originals = {_step_key(step) for source in sources for step in source.steps} - {""}
+    return [step for step in recipe.steps if _step_key(step) in originals]
+
+
+def _step_key(step: str) -> str:
+    return " ".join(normalise(step).split())
