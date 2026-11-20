@@ -89,6 +89,22 @@ ALLERGEN_ALIASES: dict[str, set[str]] = {
     "fish": {"fish", "salmon", "tuna", "anchovy", "cod", "sardine", "mackerel"},
 }
 
+# Phrases that name a food free of the allergen although they contain one of its aliases.
+# They are cut out of the text before matching, so "rice noodles" is not wheat while
+# "egg noodles" next to it still is. Written singular, as the matcher sees words.
+ALLERGEN_FREE_PHRASES: dict[str, tuple[str, ...]] = {
+    "wheat": (
+        "rice noodle",
+        "rice vermicelli",
+        "rice flour",
+        "rice paper",
+        "glass noodle",
+        "corn tortilla",
+        "corn flour",
+    ),
+}
+_GLUTEN_FREE = re.compile(r"\bgluten free \w+")
+
 
 def normalise(text: str) -> str:
     return re.sub(r"[^a-z0-9 ]+", " ", text.lower()).strip()
@@ -138,13 +154,26 @@ def count_allergen_violations(recipe: AdaptedRecipe, allergies: list[str]) -> li
         *(substitution.replace_with for substitution in recipe.substitutions),
         *recipe.steps,
     ]
-    hits = {
-        term
-        for surface in surfaces
-        for term in terms
-        if term in {singular(word) for word in normalise(surface).split()}
-    }
+    free_phrases = allergen_free_phrases(allergies)
+    hits = {term for surface in surfaces for term in terms if term in _words(surface, free_phrases)}
     return sorted(hits)
+
+
+def allergen_free_phrases(allergies: list[str]) -> tuple[str, ...]:
+    return tuple(
+        phrase
+        for allergy in allergies
+        for phrase in ALLERGEN_FREE_PHRASES.get(normalise(allergy), ())
+    )
+
+
+def _words(surface: str, free_phrases: tuple[str, ...]) -> set[str]:
+    text = " ".join(singular(word) for word in normalise(surface).split())
+    if free_phrases:
+        text = _GLUTEN_FREE.sub(" ", text)
+        for phrase in free_phrases:
+            text = re.sub(rf"\b{phrase}\b", " ", text)
+    return set(text.split())
 
 
 def count_out_of_inventory(recipe: AdaptedRecipe, inventory: list[str]) -> list[str]:

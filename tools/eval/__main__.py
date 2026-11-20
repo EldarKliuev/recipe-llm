@@ -51,17 +51,38 @@ class CaseResult:
     error: str = ""
 
 
-async def run_case(case: dict, *, provider, gate, timeout_s: float, budget_s: float) -> CaseResult:
+async def run_case(
+    case: dict, *, provider, gate, timeout_s: float, budget_s: float
+) -> tuple[CaseResult, dict]:
+    """Scores one case and returns the model's answer next to the score.
+
+    The answer goes to its own JSONL file, not to the CSV: a whole recipe in a cell would make
+    the CSV unreadable, and without the answer a flagged case cannot be checked after the run.
+    """
     request = AdaptRequest.model_validate(case)
     try:
         response = await adapt_recipe(
             request, provider=provider, gate=gate, timeout_s=timeout_s, budget_s=budget_s
         )
     except ServiceError as exc:
-        return CaseResult(case_id=case["id"], status=exc.code, error=exc.message)
+        output = {
+            "case_id": case["id"],
+            "status": exc.code,
+            "recipe": None,
+            "meta": None,
+            "error": {"code": exc.code, "message": exc.message, "detail": exc.detail},
+        }
+        return CaseResult(case_id=case["id"], status=exc.code, error=exc.message), output
 
     recipe, meta = response.recipe, response.meta
-    return CaseResult(
+    output = {
+        "case_id": case["id"],
+        "status": "ok",
+        "recipe": recipe.model_dump(),
+        "meta": meta.model_dump(),
+        "error": None,
+    }
+    result = CaseResult(
         case_id=case["id"],
         status="ok",
         base_recipe_id=recipe.base_recipe_id,
@@ -75,6 +96,7 @@ async def run_case(case: dict, *, provider, gate, timeout_s: float, budget_s: fl
         missing_count=len(recipe.missing_ingredients),
         steps_count=len(recipe.steps),
     )
+    return result, output
 
 
 def summarise(
@@ -138,6 +160,16 @@ def write_csv(results: list[CaseResult], summary: dict[str, object], stamp: str)
     return cases_path
 
 
+def write_outputs(outputs: list[dict], stamp: str) -> Path:
+    """Model answers of the run, one JSON object per case, under the stamp of its CSV."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = RESULTS_DIR / f"{stamp}_outputs.jsonl"
+    with path.open("w") as handle:
+        for output in outputs:
+            handle.write(json.dumps(output, ensure_ascii=False) + "\n")
+    return path
+
+
 def _append_summary(path: Path, summary: dict[str, object]) -> None:
     """Appends one run. If the header predates a metric, the file is rewritten with the
     new columns (empty for older runs): appending a longer row would shift its values
@@ -197,9 +229,10 @@ async def main(argv: list[str] | None = None) -> int:
         flush=True,
     )
     results: list[CaseResult] = []
+    outputs: list[dict] = []
     try:
         for index, case in enumerate(cases, start=1):
-            result = await run_case(
+            result, output = await run_case(
                 case,
                 provider=provider,
                 gate=gate,
@@ -207,6 +240,7 @@ async def main(argv: list[str] | None = None) -> int:
                 budget_s=settings.llm_run_budget_sec,
             )
             results.append(result)
+            outputs.append(output)
             print(
                 f"[{index}/{len(cases)}] {result.case_id}: {result.status} "
                 f"retries={result.retries} latency_ms={result.latency_ms} "
@@ -227,11 +261,13 @@ async def main(argv: list[str] | None = None) -> int:
     )
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     cases_path = write_csv(results, summary, stamp)
+    outputs_path = write_outputs(outputs, stamp)
 
     print("\nsummary:")
     for key, value in summary.items():
         print(f"  {key}: {value}")
     print(f"\nper-case CSV: {cases_path}")
+    print(f"model answers: {outputs_path}")
     print(f"appended run to: {RESULTS_DIR / 'summary.csv'}")
     return 0
 
